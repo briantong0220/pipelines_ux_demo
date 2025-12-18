@@ -1,0 +1,149 @@
+{
+  "executions": [
+    {
+      "id": "9d6ff3b5-789c-4f89-a522-ada1778ef848",
+      "pipelineId": "e2baec7f-b8cb-4bb3-b4f2-2782a18e50b0",
+      "currentNodeId": "end-1766020083882",
+      "status": "completed",
+      "nodeExecutions": [
+        {
+          "nodeId": "review-1766019697182",
+          "status": "completed",
+          "sourceSubtaskNodeId": "subtask-1766019701016",
+          "allFieldsAccepted": true,
+          "reviewedAt": "2025-12-18T01:29:59.196Z"
+        },
+        {
+          "nodeId": "subtask-1766019701016",
+          "status": "revision_needed",
+          "fieldHistories": [
+            {
+              "fieldId": "field-1766019850517",
+              "versions": [
+                {
+                  "version": 1,
+                  "value": "2",
+                  "submittedAt": "2025-12-18T01:28:44.669Z",
+                  "submittedBy": "editor",
+                  "status": "accepted",
+                  "reviewComment": "yep",
+                  "reviewedAt": "2025-12-18T01:29:59.196Z",
+                  "reviewedBy": "reviewer"
+                }
+              ],
+              "currentVersion": 1
+            },
+            {
+              "fieldId": "field-1766019865165",
+              "versions": [
+                {
+                  "version": 1,
+                  "value": "used a calculator",
+                  "submittedAt": "2025-12-18T01:28:44.669Z",
+                  "submittedBy": "editor",
+                  "status": "accepted",
+                  "reviewComment": "ok",
+                  "reviewedAt": "2025-12-18T01:29:59.196Z",
+                  "reviewedBy": "reviewer"
+                }
+              ],
+              "currentVersion": 1
+            }
+          ],
+          "startedAt": "2025-12-18T01:27:48.568Z",
+          "lastUpdatedAt": "2025-12-18T01:29:59.197Z"
+        },
+        {
+          "nodeId": "subtask-1766019989591",
+          "status": "waiting_review",
+          "fieldHistories": [
+            {
+              "fieldId": "field-1766019999916",
+              "versions": [
+                {
+                  "version": 1,
+                  "value": "Roses are red, and violets are blue",
+                  "submittedAt": "2025-12-18T01:32:30.921Z",
+                  "submittedBy": "editor",
+                  "status": "accepted",
+                  "reviewComment": "beautiful",
+                  "reviewedAt": "2025-12-18T01:33:36.058Z",
+                  "reviewedBy": "reviewer"
+                }
+              ],
+              "currentVersion": 1
+            }
+          ],
+          "lastUpdatedAt": "2025-12-18T01:32:30.921Z"
+        },
+        {
+          "nodeId": "review-1766020064532",
+          "status": "completed",
+          "sourceSubtaskNodeId": "subtask-1766019989591",
+          "allFieldsAccepted": true,
+          "reviewedAt": "2025-12-18T01:33:36.058Z"
+        },
+        {
+          "nodeId": "end-1766020083882",
+          "status": "completed",
+          "completedAt": "2025-12-18T01:33:36.059Z"
+        }
+      ],
+      "createdAt": "2025-12-18T01:27:48.568Z",
+      "completedAt": "2025-12-18T01:33:36.059Z"
+    },
+    {
+      "id": "be446483-1e93-4d31-80c2-950e2c29edf4",
+      "pipelineId": "e2baec7f-b8cb-4bb3-b4f2-2782a18e50b0",
+      "currentNodeId": "subtask-1766019701016",
+      "status": "active",
+      "nodeExecutions": [
+        {
+          "nodeId": "review-1766019697182",
+          "status": "pending",
+          "sourceSubtaskNodeId": "subtask-1766019701016",
+          "allFieldsAccepted": false
+        },
+        {
+          "nodeId": "subtask-1766019701016",
+          "status": "pending",
+          "fieldHistories": [
+            {
+              "fieldId": "field-1766019850517",
+              "versions": [],
+              "currentVersion": 0
+            },
+            {
+              "fieldId": "field-1766019865165",
+              "versions": [],
+              "currentVersion": 0
+            }
+          ],
+          "startedAt": "2025-12-18T02:03:27.752Z"
+        },
+        {
+          "nodeId": "subtask-1766019989591",
+          "status": "pending",
+          "fieldHistories": [
+            {
+              "fieldId": "field-1766019999916",
+              "versions": [],
+              "currentVersion": 0
+            }
+          ]
+        },
+        {
+          "nodeId": "review-1766020064532",
+          "status": "pending",
+          "sourceSubtaskNodeId": "subtask-1766019989591",
+          "allFieldsAccepted": false
+        },
+        {
+          "nodeId": "end-1766020083882",
+          "status": "pending"
+        }
+      ],
+      "createdAt": "2025-12-18T02:03:27.752Z"
+    }
+  ]
+}

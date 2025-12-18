@@ -1,0 +1,276 @@
+{
+  "pipelines": [
+    {
+      "id": "e2baec7f-b8cb-4bb3-b4f2-2782a18e50b0",
+      "name": "Pipeline of math and writing",
+      "description": "",
+      "nodes": [
+        {
+          "id": "start-1766019572002",
+          "type": "start",
+          "label": "Pipeline Start",
+          "position": {
+            "x": 15.034495535275525,
+            "y": 89.95098436536556
+          },
+          "data": {
+            "label": "Pipeline Start"
+          },
+          "measured": {
+            "width": 180,
+            "height": 96
+          },
+          "selected": false,
+          "dragging": false
+        },
+        {
+          "id": "review-1766019697182",
+          "type": "review",
+          "position": {
+            "x": 331.68791595371215,
+            "y": 263.8643325088199
+          },
+          "data": {
+            "sourceSubtaskNodeId": "subtask-1766019701016",
+            "label": "Review: do math",
+            "description": "",
+            "reviewableFieldIds": [
+              "field-1766019865165",
+              "field-1766019850517"
+            ]
+          },
+          "measured": {
+            "width": 200,
+            "height": 114
+          },
+          "selected": true,
+          "dragging": false
+        },
+        {
+          "id": "subtask-1766019701016",
+          "type": "subtask",
+          "position": {
+            "x": 14.07499902130462,
+            "y": 266.2530532823257
+          },
+          "data": {
+            "fields": [
+              {
+                "id": "field-1766019876938",
+                "label": "Do some math",
+                "type": "instructions"
+              },
+              {
+                "id": "field-1766019850517",
+                "label": "Here is a task, what is 1 + 1",
+                "type": "text",
+                "required": true
+              },
+              {
+                "id": "field-1766019865165",
+                "label": "What is your reasoning?",
+                "type": "longtext",
+                "required": true
+              }
+            ],
+            "label": "Task: do math",
+            "description": ""
+          },
+          "measured": {
+            "width": 180,
+            "height": 96
+          },
+          "selected": false,
+          "dragging": false
+        },
+        {
+          "id": "subtask-1766019989591",
+          "type": "subtask",
+          "position": {
+            "x": 7.282520436981969,
+            "y": 448.610085117534
+          },
+          "data": {
+            "fields": [
+              {
+                "id": "field-1766019999916",
+                "label": "Write something insightful ",
+                "type": "longtext",
+                "required": true
+              }
+            ],
+            "label": "Task: do some writing",
+            "description": ""
+          },
+          "measured": {
+            "width": 204,
+            "height": 96
+          },
+          "selected": false,
+          "dragging": false
+        },
+        {
+          "id": "review-1766020064532",
+          "type": "review",
+          "position": {
+            "x": 285.55987987769953,
+            "y": 445.9848270096027
+          },
+          "data": {
+            "sourceSubtaskNodeId": "subtask-1766019989591",
+            "label": "Review: do some writing",
+            "description": "",
+            "reviewableFieldIds": [
+              "field-1766019999916"
+            ]
+          },
+          "measured": {
+            "width": 224,
+            "height": 114
+          },
+          "selected": false,
+          "dragging": false
+        },
+        {
+          "id": "end-1766020083882",
+          "type": "end",
+          "position": {
+            "x": 18.056108221228612,
+            "y": 638.941297942553
+          },
+          "data": {
+            "label": "Pipeline Complete",
+            "description": ""
+          },
+          "measured": {
+            "width": 180,
+            "height": 96
+          },
+          "selected": false,
+          "dragging": false
+        }
+      ],
+      "edges": [
+        {
+          "source": "start-1766019572002",
+          "sourceHandle": "output",
+          "target": "subtask-1766019701016",
+          "targetHandle": "input",
+          "id": "edge-start-1766019572002-subtask-1766019701016-1766019719622",
+          "type": "default",
+          "data": {},
+          "animated": true,
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#6b7280",
+            "strokeWidth": 2
+          }
+        },
+        {
+          "source": "subtask-1766019701016",
+          "sourceHandle": "output",
+          "target": "review-1766019697182",
+          "targetHandle": "input",
+          "id": "edge-subtask-1766019701016-review-1766019697182-1766019759267",
+          "type": "default",
+          "data": {},
+          "animated": true,
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#6b7280",
+            "strokeWidth": 2
+          }
+        },
+        {
+          "source": "review-1766019697182",
+          "sourceHandle": "reject",
+          "target": "subtask-1766019701016",
+          "targetHandle": "input",
+          "id": "edge-review-1766019697182-subtask-1766019701016-1766019772492",
+          "type": "default",
+          "data": {
+            "type": "reject"
+          },
+          "label": "Reject",
+          "animated": true,
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#ef4444",
+            "strokeWidth": 2
+          },
+          "selected": false
+        },
+        {
+          "source": "review-1766019697182",
+          "sourceHandle": "accept",
+          "target": "subtask-1766019989591",
+          "targetHandle": "input",
+          "id": "edge-review-1766019697182-subtask-1766019989591-1766020061102",
+          "type": "deletable",
+          "data": {
+            "type": "accept"
+          },
+          "label": "Accept",
+          "animated": true,
+          "markerEnd": {
+            "type": "arrowclosed"
+          }
+        },
+        {
+          "source": "subtask-1766019989591",
+          "sourceHandle": "output",
+          "target": "review-1766020064532",
+          "targetHandle": "input",
+          "id": "edge-subtask-1766019989591-review-1766020064532-1766020080016",
+          "type": "deletable",
+          "data": {},
+          "animated": true,
+          "markerEnd": {
+            "type": "arrowclosed"
+          }
+        },
+        {
+          "source": "review-1766020064532",
+          "sourceHandle": "reject",
+          "target": "subtask-1766019989591",
+          "targetHandle": "input",
+          "id": "edge-review-1766020064532-subtask-1766019989591-1766020082798",
+          "type": "deletable",
+          "data": {
+            "type": "reject"
+          },
+          "label": "Reject",
+          "animated": true,
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "selected": false
+        },
+        {
+          "source": "review-1766020064532",
+          "sourceHandle": "accept",
+          "target": "end-1766020083882",
+          "targetHandle": "input",
+          "id": "edge-review-1766020064532-end-1766020083882-1766020094256",
+          "type": "deletable",
+          "data": {
+            "type": "accept"
+          },
+          "label": "Accept",
+          "animated": true,
+          "markerEnd": {
+            "type": "arrowclosed"
+          }
+        }
+      ],
+      "createdAt": "2025-12-18T01:08:35.666Z",
+      "createdBy": "admin"
+    }
+  ]
+}
