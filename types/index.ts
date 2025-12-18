@@ -233,7 +233,7 @@ export interface FieldToReview {
 export interface FieldReviewResult {
   fieldId: string;               // TaskField.id
   status: 'accepted' | 'rejected'; // Review decision
-  comment: string;               // Reviewer's comment
+  comment?: string;              // Reviewer's comment (optional for accept, required for reject)
 }
 
 // ============== TYPE GUARDS ==============

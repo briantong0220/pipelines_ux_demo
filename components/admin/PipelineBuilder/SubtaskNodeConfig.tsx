@@ -319,7 +319,7 @@ function FieldCard({
       </div>
 
       {/* Field number indicator */}
-      <div className="absolute -left-8 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-medium flex items-center justify-center">
+      <div className="absolute -left-5 top-4 w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-[10px] font-medium flex items-center justify-center">
         {index + 1}
       </div>
     </div>
@@ -408,7 +408,7 @@ function InstructionCard({
       </div>
 
       {/* Index indicator */}
-      <div className="absolute -left-8 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-amber-100 text-amber-600 text-xs font-medium flex items-center justify-center">
+      <div className="absolute -left-5 top-3 w-4 h-4 rounded-full bg-amber-200 text-amber-700 text-[10px] font-medium flex items-center justify-center">
         {index + 1}
       </div>
     </div>
@@ -631,7 +631,7 @@ export function SubtaskNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, 
           )}
 
           {/* Field Cards */}
-          <div className="space-y-3 pl-8">
+          <div className="space-y-3 pl-5">
             {fields.length === 0 ? (
               <div
                 className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
@@ -686,7 +686,7 @@ export function SubtaskNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, 
 
           {/* Add Field Button */}
           {fields.length > 0 && (
-            <div className="mt-4 pl-8">
+            <div className="mt-4 pl-5">
               <AddFieldButton onAdd={handleAddField} />
             </div>
           )}

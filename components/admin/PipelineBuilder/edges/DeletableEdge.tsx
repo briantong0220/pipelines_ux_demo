@@ -45,15 +45,16 @@ function DeletableEdge({
       : '#6b7280';
 
   return (
-    <>
+    <g
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Invisible wider path for easier hover detection */}
       <path
         d={edgePath}
         fill="none"
         stroke="transparent"
-        strokeWidth={20}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        strokeWidth={30}
         style={{ cursor: 'pointer' }}
       />
       <BaseEdge
@@ -71,21 +72,20 @@ function DeletableEdge({
           style={{
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            pointerEvents: 'all',
+            pointerEvents: isHovered ? 'all' : 'none',
           }}
           className="nodrag nopan"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         >
           {/* Delete button */}
           <button
             onClick={onEdgeClick}
+            onMouseEnter={() => setIsHovered(true)}
             className={`
               flex items-center justify-center w-6 h-6 rounded-full shadow-md
               transition-all duration-150
               ${isHovered
                 ? 'opacity-100 bg-red-500 border-2 border-red-600 scale-100'
-                : 'opacity-0 bg-white border-2 border-gray-300 scale-75'
+                : 'opacity-0 bg-white border-2 border-gray-300 scale-75 pointer-events-none'
               }
             `}
             title="Delete connection"
@@ -106,7 +106,7 @@ function DeletableEdge({
           </button>
         </div>
       </EdgeLabelRenderer>
-    </>
+    </g>
   );
 }
 

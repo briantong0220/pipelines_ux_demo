@@ -89,15 +89,22 @@ export async function POST(
 
       // Validate each field review
       for (const review of body.data.fieldReviews as FieldReviewResult[]) {
-        if (!review.fieldId || !review.status || !review.comment) {
+        if (!review.fieldId || !review.status) {
           return Response.json(
-            { success: false, error: 'Each field review must have fieldId, status, and comment' } as ApiResponse,
+            { success: false, error: 'Each field review must have fieldId and status' } as ApiResponse,
             { status: 400 }
           );
         }
         if (review.status !== 'accepted' && review.status !== 'rejected') {
           return Response.json(
             { success: false, error: 'Field review status must be "accepted" or "rejected"' } as ApiResponse,
+            { status: 400 }
+          );
+        }
+        // Comment is required for rejections only
+        if (review.status === 'rejected' && !review.comment) {
+          return Response.json(
+            { success: false, error: 'A comment is required when rejecting a field' } as ApiResponse,
             { status: 400 }
           );
         }

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Pipeline, PipelineNode, PipelineEdge, PipelineExecution } from '@/types';
 import Button from '@/components/ui/Button';
 import { PipelineBuilder } from './PipelineBuilder';
+import ExecutionDetailView from './ExecutionDetailView';
 
 // Default skeleton template for new pipelines
 function createSkeletonTemplate(): { nodes: PipelineNode[]; edges: PipelineEdge[] } {
@@ -45,6 +46,7 @@ export default function AdminView() {
   const [isLoading, setIsLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingPipeline, setEditingPipeline] = useState<Pipeline | null>(null);
+  const [viewingExecutionId, setViewingExecutionId] = useState<string | null>(null);
 
   const fetchPipelines = async () => {
     setIsLoading(true);
@@ -160,6 +162,16 @@ export default function AdminView() {
   // Create skeleton template for new pipelines
   const skeletonTemplate = useMemo(() => createSkeletonTemplate(), []);
 
+  // View execution details
+  if (viewingExecutionId) {
+    return (
+      <ExecutionDetailView
+        executionId={viewingExecutionId}
+        onClose={() => setViewingExecutionId(null)}
+      />
+    );
+  }
+
   if (showBuilder) {
     const isNewPipeline = !editingPipeline;
     return (
@@ -264,6 +276,60 @@ export default function AdminView() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Executions List */}
+      {executions.length > 0 && (
+        <div className="mt-10">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Pipeline Executions</h3>
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Pipeline</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Started</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Completed</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {executions.map((exec) => {
+                  const pipeline = pipelines.find(p => p.id === exec.pipelineId);
+                  return (
+                    <tr key={exec.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {pipeline?.name || 'Unknown Pipeline'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${exec.status === 'completed'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-blue-100 text-blue-700'
+                          }`}>
+                          {exec.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {new Date(exec.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {exec.completedAt ? new Date(exec.completedAt).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setViewingExecutionId(exec.id)}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

@@ -173,21 +173,18 @@ export default function SubtaskForm({ queueItem, onSubmitted, onCancel }: Subtas
               const isRejected = queueItem.rejectedFieldIds?.includes(field.id);
               const isAccepted = !isRejected && Boolean(queueItem.existingFieldValues?.[field.id]);
 
-              // Find rejection comment if any
-              const rejectionComment = queueItem.accumulatedFields?.find(
-                f => f.fieldId === field.id && f.reviewStatus === 'rejected'
-              )?.reviewComment;
+              // Find review info for this field
+              const fieldReview = queueItem.accumulatedFields?.find(
+                f => f.fieldId === field.id
+              );
+              const rejectionComment = fieldReview?.reviewStatus === 'rejected' ? fieldReview.reviewComment : undefined;
+              const acceptedComment = fieldReview?.reviewStatus === 'accepted' ? fieldReview.reviewComment : undefined;
 
               return (
                 <div key={field.id}>
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                     {field.label}
                     {field.required && <span className="text-red-500">*</span>}
-                    {isAccepted && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                        Accepted
-                      </span>
-                    )}
                   </label>
 
                   {isRejected && rejectionComment && (
@@ -236,6 +233,21 @@ export default function SubtaskForm({ queueItem, onSubmitted, onCancel }: Subtas
                       placeholder={`Enter ${field.label.toLowerCase()}...`}
                       required={field.required}
                     />
+                  )}
+
+                  {/* Accepted status - subtle indicator below the field */}
+                  {isAccepted && (
+                    <div className="mt-2 flex items-start gap-2">
+                      <svg className="w-4 h-4 text-green-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <div className="text-sm text-green-700">
+                        <span className="font-medium">Approved by reviewer</span>
+                        {acceptedComment && (
+                          <p className="text-green-600 mt-0.5">&ldquo;{acceptedComment}&rdquo;</p>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               );
