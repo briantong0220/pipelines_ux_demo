@@ -337,8 +337,9 @@ export default function ExecutionDetailView({ executionId, onClose }: ExecutionD
 
                     {/* Find the subtask this reviews and show field-level feedback */}
                     {(() => {
+                      const reviewData = item.data as ReviewExecution;
                       const subtaskExec = execution.nodeExecutions.find(
-                        ne => ne.nodeId === item.data.sourceSubtaskNodeId
+                        ne => ne.nodeId === reviewData.sourceSubtaskNodeId
                       );
                       if (!subtaskExec || !isSubtaskExecution(subtaskExec)) return null;
 
@@ -363,7 +364,7 @@ export default function ExecutionDetailView({ executionId, onClose }: ExecutionD
                                 </span>
                                 <div>
                                   <span className="font-medium text-gray-700">
-                                    {getFieldLabel(item.data.sourceSubtaskNodeId, history.fieldId)}:
+                                    {getFieldLabel(reviewData.sourceSubtaskNodeId, history.fieldId)}:
                                   </span>
                                   <span className="text-gray-600 ml-1">{latest.reviewComment}</span>
                                 </div>
