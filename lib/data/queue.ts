@@ -143,6 +143,20 @@ export async function getEditorQueue(): Promise<EditorQueueItem[]> {
       // Get accumulated fields from prior subtasks
       const accumulatedFields = getAccumulatedFields(pipeline, execution, currentNode.nodeId);
 
+      const assignedTo = currentNode.assignedTo;
+      let assignmentBehavior: 'any' | 'same_person' | 'different_person' | undefined;
+      let previousAssignee: string | undefined;
+
+      if (assignedTo) {
+        if (assignedTo.startsWith('not:')) {
+          assignmentBehavior = 'different_person';
+          previousAssignee = assignedTo.slice(4);
+        } else {
+          assignmentBehavior = 'same_person';
+          previousAssignee = assignedTo;
+        }
+      }
+
       queueItems.push({
         executionId: execution.id,
         pipelineId: pipeline.id,
@@ -155,7 +169,9 @@ export async function getEditorQueue(): Promise<EditorQueueItem[]> {
           ? existingFieldValues
           : undefined,
         accumulatedFields: accumulatedFields.length > 0 ? accumulatedFields : undefined,
-        createdAt: currentNode.startedAt || execution.createdAt
+        createdAt: currentNode.startedAt || execution.createdAt,
+        assignmentBehavior,
+        previousAssignee,
       });
     }
   }
@@ -252,12 +268,27 @@ export async function getReviewerQueue(): Promise<ReviewerQueueItem[]> {
             fieldType: field.type,
             currentValue: latestVersion.value,
             version: latestVersion.version,
-            previousReviewComments: previousComments.length > 0 ? previousComments : undefined
+            previousReviewComments: previousComments.length > 0 ? previousComments : undefined,
+            subfields: field.subfields
           };
         });
 
       // Get accumulated fields from prior subtasks (not including the one being reviewed)
       const accumulatedFields = getAccumulatedFields(pipeline, execution, reviewNodeData.sourceSubtaskNodeId);
+
+      const assignedTo = currentNode.assignedTo;
+      let assignmentBehavior: 'any' | 'same_person' | 'different_person' | undefined;
+      let previousAssignee: string | undefined;
+
+      if (assignedTo) {
+        if (assignedTo.startsWith('not:')) {
+          assignmentBehavior = 'different_person';
+          previousAssignee = assignedTo.slice(4);
+        } else {
+          assignmentBehavior = 'same_person';
+          previousAssignee = assignedTo;
+        }
+      }
 
       queueItems.push({
         executionId: execution.id,
@@ -268,7 +299,9 @@ export async function getReviewerQueue(): Promise<ReviewerQueueItem[]> {
         subtaskNodeId: reviewNodeData.sourceSubtaskNodeId,
         fieldsToReview,
         accumulatedFields: accumulatedFields.length > 0 ? accumulatedFields : undefined,
-        createdAt: subtaskExec.lastUpdatedAt || execution.createdAt
+        createdAt: subtaskExec.lastUpdatedAt || execution.createdAt,
+        assignmentBehavior,
+        previousAssignee,
       });
     }
   }

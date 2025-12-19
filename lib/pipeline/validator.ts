@@ -1,4 +1,4 @@
-import { Pipeline, PipelineNode, PipelineEdge, isSubtaskNode } from '@/types';
+import { Pipeline, PipelineNode, PipelineEdge, isSubtaskNode, ReviewNodeData } from '@/types';
 
 export interface ValidationError {
   type: string;
@@ -140,44 +140,74 @@ function validateNode(
       break;
 
     case 'review':
-      // Review must have exactly 2 outgoing edges (accept and reject)
-      if (outgoingEdges.length !== 2) {
-        errors.push({
-          type: 'INVALID_REVIEW_EDGES',
-          message: `Review node "${node.data?.label || node.label}" must have exactly 2 outgoing edges (accept and reject), found ${outgoingEdges.length}`,
-          nodeId: node.id
-        });
-      } else {
-        // Check that one is 'accept' and one is 'reject'
-        // Edge type can be in edge.type (if it's accept/reject) or edge.data.type (React Flow stores it in data)
-        const getEdgeType = (e: PipelineEdge) => {
-          // First check if type is specifically 'accept' or 'reject' (not 'default' which React Flow uses)
-          if (e.type === 'accept' || e.type === 'reject') return e.type;
-          // Otherwise check data.type (where React Flow edges store custom data)
-          const dataType = (e as unknown as { data?: { type?: string } }).data?.type;
-          return dataType;
-        };
-        const acceptEdge = outgoingEdges.find(e => getEdgeType(e) === 'accept');
-        const rejectEdge = outgoingEdges.find(e => getEdgeType(e) === 'reject');
+      const reviewData = node.data as ReviewNodeData;
+      const hasMaxAttempts = reviewData.maxAttempts !== undefined && reviewData.maxAttempts > 0;
+      
+      const getEdgeType = (e: PipelineEdge) => {
+        if (e.type === 'accept' || e.type === 'reject' || e.type === 'max_attempts') return e.type;
+        const dataType = (e as unknown as { data?: { type?: string } }).data?.type;
+        return dataType;
+      };
+      
+      const acceptEdge = outgoingEdges.find(e => getEdgeType(e) === 'accept');
+      const rejectEdge = outgoingEdges.find(e => getEdgeType(e) === 'reject');
+      const maxAttemptsEdge = outgoingEdges.find(e => getEdgeType(e) === 'max_attempts');
 
-        if (!acceptEdge) {
+      if (hasMaxAttempts) {
+        if (outgoingEdges.length !== 3) {
           errors.push({
-            type: 'NO_ACCEPT_EDGE',
-            message: `Review node "${node.data?.label || node.label}" must have an 'accept' edge`,
+            type: 'INVALID_REVIEW_EDGES',
+            message: `Review node "${reviewData.label || node.label}" with max attempts must have exactly 3 outgoing edges (accept, reject, max_attempts), found ${outgoingEdges.length}`,
             nodeId: node.id
           });
         }
-
+        
+        if (!acceptEdge) {
+          errors.push({
+            type: 'NO_ACCEPT_EDGE',
+            message: `Review node "${reviewData.label || node.label}" must have an 'accept' edge`,
+            nodeId: node.id
+          });
+        }
         if (!rejectEdge) {
           errors.push({
             type: 'NO_REJECT_EDGE',
-            message: `Review node "${node.data?.label || node.label}" must have a 'reject' edge`,
+            message: `Review node "${reviewData.label || node.label}" must have a 'reject' edge`,
+            nodeId: node.id
+          });
+        }
+        if (!maxAttemptsEdge) {
+          errors.push({
+            type: 'NO_MAX_ATTEMPTS_EDGE',
+            message: `Review node "${reviewData.label || node.label}" with max attempts must have a 'max_attempts' edge`,
+            nodeId: node.id
+          });
+        }
+      } else {
+        if (outgoingEdges.length !== 2) {
+          errors.push({
+            type: 'INVALID_REVIEW_EDGES',
+            message: `Review node "${reviewData.label || node.label}" must have exactly 2 outgoing edges (accept and reject), found ${outgoingEdges.length}`,
+            nodeId: node.id
+          });
+        }
+        
+        if (!acceptEdge) {
+          errors.push({
+            type: 'NO_ACCEPT_EDGE',
+            message: `Review node "${reviewData.label || node.label}" must have an 'accept' edge`,
+            nodeId: node.id
+          });
+        }
+        if (!rejectEdge) {
+          errors.push({
+            type: 'NO_REJECT_EDGE',
+            message: `Review node "${reviewData.label || node.label}" must have a 'reject' edge`,
             nodeId: node.id
           });
         }
       }
 
-      // Review must have sourceSubtaskNodeId
       if ('sourceSubtaskNodeId' in node.data) {
         const sourceNode = allNodes.find(n => n.id === node.data.sourceSubtaskNodeId);
         if (!sourceNode) {

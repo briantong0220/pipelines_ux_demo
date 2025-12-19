@@ -18,7 +18,7 @@
           },
           "measured": {
             "width": 180,
-            "height": 96
+            "height": 95
           },
           "selected": false,
           "dragging": false
@@ -41,9 +41,9 @@
           },
           "measured": {
             "width": 200,
-            "height": 114
+            "height": 136
           },
-          "selected": true,
+          "selected": false,
           "dragging": false
         },
         {
@@ -71,6 +71,24 @@
                 "label": "What is your reasoning?",
                 "type": "longtext",
                 "required": true
+              },
+              {
+                "id": "field-1766105140127",
+                "label": "",
+                "type": "dynamic",
+                "subfields": [
+                  {
+                    "id": "subfield-1766105143826",
+                    "label": "dog",
+                    "type": "text"
+                  },
+                  {
+                    "id": "subfield-1766105144810",
+                    "label": "caat",
+                    "type": "longtext"
+                  }
+                ],
+                "required": true
               }
             ],
             "label": "Task: do math",
@@ -78,9 +96,9 @@
           },
           "measured": {
             "width": 180,
-            "height": 96
+            "height": 95
           },
-          "selected": false,
+          "selected": true,
           "dragging": false
         },
         {
@@ -103,8 +121,8 @@
             "description": ""
           },
           "measured": {
-            "width": 204,
-            "height": 96
+            "width": 203,
+            "height": 95
           },
           "selected": false,
           "dragging": false
@@ -125,8 +143,8 @@
             ]
           },
           "measured": {
-            "width": 224,
-            "height": 114
+            "width": 223,
+            "height": 136
           },
           "selected": false,
           "dragging": false
@@ -144,7 +162,7 @@
           },
           "measured": {
             "width": 180,
-            "height": 96
+            "height": 95
           },
           "selected": false,
           "dragging": false

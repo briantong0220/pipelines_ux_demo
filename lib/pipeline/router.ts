@@ -1,13 +1,34 @@
 import { Pipeline, PipelineNode, PipelineEdge } from '@/types';
 import { getPipelineById } from '@/lib/data/pipelines';
 
+export async function getEdge(
+  pipelineId: string,
+  sourceNodeId: string,
+  edgeType?: 'accept' | 'reject' | 'max_attempts'
+): Promise<PipelineEdge | undefined> {
+  const pipeline = await getPipelineById(pipelineId);
+  if (!pipeline) return undefined;
+
+  const outgoingEdges = pipeline.edges.filter(edge => edge.source === sourceNodeId);
+
+  if (edgeType) {
+    const getEdgeDataType = (e: PipelineEdge) => {
+      if (e.type === 'accept' || e.type === 'reject' || e.type === 'max_attempts') return e.type;
+      return e.data?.type;
+    };
+    return outgoingEdges.find(e => getEdgeDataType(e) === edgeType);
+  }
+
+  return outgoingEdges[0];
+}
+
 /**
  * Get the next node based on current node and routing type
  */
 export async function getNextNode(
   pipelineId: string,
   currentNodeId: string,
-  edgeType?: 'accept' | 'reject'
+  edgeType?: 'accept' | 'reject' | 'max_attempts'
 ): Promise<PipelineNode> {
   const pipeline = await getPipelineById(pipelineId);
 
@@ -18,10 +39,8 @@ export async function getNextNode(
   const outgoingEdges = pipeline.edges.filter(edge => edge.source === currentNodeId);
 
   if (edgeType) {
-    // For review nodes with accept/reject routing
-    // Edge type can be in edge.type (if it's accept/reject) or edge.data.type (React Flow stores it in data)
     const getEdgeType = (e: PipelineEdge) => {
-      if (e.type === 'accept' || e.type === 'reject') return e.type;
+      if (e.type === 'accept' || e.type === 'reject' || e.type === 'max_attempts') return e.type;
       return (e as unknown as { data?: { type?: string } }).data?.type;
     };
     const edge = outgoingEdges.find(e => getEdgeType(e) === edgeType);

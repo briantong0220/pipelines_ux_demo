@@ -97,9 +97,79 @@ export default function FieldReviewItem({
           <div className="bg-white border-l-4 border-blue-400 rounded-r-lg shadow-sm">
             <div className="p-4 pl-5">
               {field.currentValue ? (
-                <p className="text-gray-900 text-base leading-relaxed whitespace-pre-wrap">
-                  {field.currentValue}
-                </p>
+                (() => {
+                  try {
+                    const parsed = JSON.parse(field.currentValue);
+                    if (Array.isArray(parsed)) {
+                      const subfields = field.subfields || [];
+                      const hasSubfields = subfields.length > 0;
+                      
+                      if (typeof parsed[0] === 'string') {
+                        return (
+                          <div className="space-y-2">
+                            {parsed.map((entry: string, idx: number) => (
+                              <div key={idx} className="flex items-start gap-2">
+                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded font-medium">
+                                  {idx + 1}
+                                </span>
+                                <p className="text-gray-900 text-base leading-relaxed flex-1">
+                                  {entry || <span className="text-gray-400 italic">Empty entry</span>}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="space-y-3">
+                          {parsed.map((entry: Record<string, string>, idx: number) => (
+                            <div key={idx} className="border border-gray-100 rounded-lg p-3 bg-gray-50">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded font-medium">
+                                  Entry {idx + 1}
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {hasSubfields ? (
+                                  subfields.map((subfield) => (
+                                    <div key={subfield.id}>
+                                      <p className="text-xs font-medium text-gray-500 mb-1">
+                                        {subfield.label || subfield.id}
+                                      </p>
+                                      <p className="text-gray-900 text-sm leading-relaxed whitespace-pre-wrap">
+                                        {entry[subfield.id] || <span className="text-gray-400 italic">Empty</span>}
+                                      </p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  Object.entries(entry).map(([key, val]) => (
+                                    <div key={key}>
+                                      <p className="text-xs font-medium text-gray-500 mb-1">
+                                        {key === '_value' ? 'Value' : key}
+                                      </p>
+                                      <p className="text-gray-900 text-sm leading-relaxed whitespace-pre-wrap">
+                                        {val || <span className="text-gray-400 italic">Empty</span>}
+                                      </p>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                  } catch {
+                    // Not JSON, display as plain text
+                  }
+                  
+                  return (
+                    <p className="text-gray-900 text-base leading-relaxed whitespace-pre-wrap">
+                      {field.currentValue}
+                    </p>
+                  );
+                })()
               ) : (
                 <p className="text-gray-400 italic">No response provided</p>
               )}

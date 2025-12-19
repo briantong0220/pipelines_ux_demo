@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { ReviewNodeData, PipelineNode, PipelineEdge, SubtaskNodeData, TaskField } from '@/types';
+import { ReviewNodeData, PipelineNode, PipelineEdge, SubtaskNodeData, TaskField, AssignmentBehavior } from '@/types';
 
 interface ReviewNodeConfigProps {
   nodeId: string;
@@ -9,6 +9,7 @@ interface ReviewNodeConfigProps {
   allNodes: PipelineNode[];
   allEdges: PipelineEdge[];
   onUpdate: (nodeId: string, data: ReviewNodeData) => void;
+  onEdgesUpdate: (edges: PipelineEdge[]) => void;
   onClose: () => void;
 }
 
@@ -45,10 +46,34 @@ function getSourceSubtaskFields(
 
 type TabType = 'edit' | 'preview';
 
-export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, onClose }: ReviewNodeConfigProps) {
+export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, onEdgesUpdate, onClose }: ReviewNodeConfigProps) {
   const [label, setLabel] = useState(data.label || '');
   const [description, setDescription] = useState(data.description || '');
+  const [maxAttempts, setMaxAttempts] = useState<number | undefined>(data.maxAttempts);
   const [activeTab, setActiveTab] = useState<TabType>('edit');
+
+  const outgoingEdges = useMemo(() => {
+    return allEdges.filter(e => e.source === nodeId);
+  }, [allEdges, nodeId]);
+
+  const getEdgeType = (edge: PipelineEdge): 'accept' | 'reject' | 'max_attempts' | undefined => {
+    if (edge.type === 'accept' || edge.type === 'reject' || edge.type === 'max_attempts') return edge.type;
+    return edge.data?.type;
+  };
+
+  const acceptEdge = outgoingEdges.find(e => getEdgeType(e) === 'accept');
+  const rejectEdge = outgoingEdges.find(e => getEdgeType(e) === 'reject');
+  const maxAttemptsEdge = outgoingEdges.find(e => getEdgeType(e) === 'max_attempts');
+
+  const [acceptAssignment, setAcceptAssignment] = useState<AssignmentBehavior>(
+    acceptEdge?.data?.assignmentBehavior || 'any'
+  );
+  const [rejectAssignment, setRejectAssignment] = useState<AssignmentBehavior>(
+    rejectEdge?.data?.assignmentBehavior || 'same_person'
+  );
+  const [maxAttemptsAssignment, setMaxAttemptsAssignment] = useState<AssignmentBehavior>(
+    maxAttemptsEdge?.data?.assignmentBehavior || 'any'
+  );
 
   const sourceSubtask = useMemo(() => {
     return getSourceSubtaskFields(nodeId, allNodes, allEdges, data.sourceSubtaskNodeId);
@@ -93,7 +118,33 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
       label,
       description,
       reviewableFieldIds: Array.from(selectedFieldIds),
+      maxAttempts,
     });
+
+    const updatedEdges = allEdges.map(edge => {
+      if (edge.source !== nodeId) return edge;
+      
+      const edgeType = getEdgeType(edge);
+      let assignmentBehavior: AssignmentBehavior | undefined;
+      
+      if (edgeType === 'accept') {
+        assignmentBehavior = acceptAssignment;
+      } else if (edgeType === 'reject') {
+        assignmentBehavior = rejectAssignment;
+      } else if (edgeType === 'max_attempts') {
+        assignmentBehavior = maxAttemptsAssignment;
+      }
+      
+      return {
+        ...edge,
+        data: {
+          ...edge.data,
+          assignmentBehavior,
+        },
+      };
+    });
+    
+    onEdgesUpdate(updatedEdges);
     onClose();
   };
 
@@ -141,6 +192,27 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
               placeholder="Add description (optional)"
             />
           </div>
+
+          {/* Max Attempts */}
+          <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-700">Max Attempts</label>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  After this many rejections, routes to escalation path
+                </p>
+              </div>
+              <input
+                type="number"
+                min="1"
+                value={maxAttempts ?? ''}
+                onChange={(e) => setMaxAttempts(e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="∞"
+              />
+            </div>
+
+          </div>
         </div>
 
         {/* Tabs */}
@@ -184,7 +256,7 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-700">
-                  Fields from &quot;{sourceSubtask.subtaskLabel}&quot;
+                  Select fields from &quot;{sourceSubtask.subtaskLabel}&quot to review;
                 </p>
                 <span className="text-xs text-gray-500">
                   {selectedFieldIds.size} of {reviewableFields.length} selected
@@ -263,6 +335,81 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
                 <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
                   This subtask only has instructions. Add text fields to make them reviewable.
                 </p>
+              )}
+
+              {/* Edge Assignment Configuration */}
+              {outgoingEdges.length > 0 && (
+                <details className="mt-6 pt-6 border-t border-gray-200">
+                  <summary className="cursor-pointer select-none">
+                    <span className="text-sm font-semibold text-gray-700 hover:text-purple-600 transition-colors">
+                      Routing & Assignment
+                    </span>
+                    <span className="text-xs text-gray-400 ml-2">
+                      (click to expand)
+                    </span>
+                  </summary>
+                  
+                  <div className="mt-4">
+                    <p className="text-xs text-gray-500 mb-4">
+                      Configure who gets assigned the next task after this review
+                    </p>
+                    
+                    <div className="space-y-3">
+                      {acceptEdge && (
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-green-200 bg-green-50">
+                          <div className="w-3 h-3 rounded-full bg-green-500" />
+                          <span className="text-sm font-medium text-green-800 flex-1">Accept Path</span>
+                          <select
+                            value={acceptAssignment}
+                            onChange={(e) => setAcceptAssignment(e.target.value as AssignmentBehavior)}
+                            className="text-sm border border-green-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                          >
+                            <option value="any">Anyone</option>
+                            <option value="same_person">Same person</option>
+                            <option value="different_person">Different person</option>
+                          </select>
+                        </div>
+                      )}
+                      
+                      {rejectEdge && (
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-red-200 bg-red-50">
+                          <div className="w-3 h-3 rounded-full bg-red-500" />
+                          <span className="text-sm font-medium text-red-800 flex-1">Reject Path</span>
+                          <select
+                            value={rejectAssignment}
+                            onChange={(e) => setRejectAssignment(e.target.value as AssignmentBehavior)}
+                            className="text-sm border border-red-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                          >
+                            <option value="any">Anyone</option>
+                            <option value="same_person">Same person</option>
+                            <option value="different_person">Different person</option>
+                          </select>
+                        </div>
+                      )}
+                      
+                      {maxAttemptsEdge && (
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50">
+                          <div className="w-3 h-3 rounded-full bg-orange-500" />
+                          <span className="text-sm font-medium text-orange-800 flex-1">Escalation Path</span>
+                          <select
+                            value={maxAttemptsAssignment}
+                            onChange={(e) => setMaxAttemptsAssignment(e.target.value as AssignmentBehavior)}
+                            className="text-sm border border-orange-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="any">Anyone</option>
+                            <option value="same_person">Same person</option>
+                            <option value="different_person">Different person</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-gray-400 mt-3">
+                      &quot;Same person&quot; = original editor revises their own work.
+                      &quot;Different person&quot; = fresh eyes required.
+                    </p>
+                  </div>
+                </details>
               )}
             </div>
           ) : (

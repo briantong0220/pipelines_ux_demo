@@ -106,15 +106,26 @@ export function PipelineCanvas({
 
   const onConnect = useCallback(
     (params: Connection) => {
-      // Determine edge type based on source handle
-      const edgeType = params.sourceHandle === 'accept' ? 'accept' : params.sourceHandle === 'reject' ? 'reject' : undefined;
+      const edgeType = params.sourceHandle === 'accept' 
+        ? 'accept' 
+        : params.sourceHandle === 'reject' 
+          ? 'reject' 
+          : params.sourceHandle === 'max_attempts'
+            ? 'max_attempts'
+            : undefined;
+
+      const edgeLabel = edgeType === 'max_attempts' 
+        ? 'Max Attempts' 
+        : edgeType 
+          ? edgeType.charAt(0).toUpperCase() + edgeType.slice(1) 
+          : undefined;
 
       const newEdge: Edge = {
         ...params,
         id: `edge-${params.source}-${params.target}-${Date.now()}`,
         type: 'deletable',
         data: { type: edgeType },
-        label: edgeType ? edgeType.charAt(0).toUpperCase() + edgeType.slice(1) : undefined,
+        label: edgeLabel,
         animated: true,
         markerEnd: {
           type: MarkerType.ArrowClosed,

@@ -1,6 +1,7 @@
 import {
   PipelineExecution,
   Pipeline,
+  PipelineEdge,
   NodeExecution,
   SubtaskExecution,
   ReviewExecution,
@@ -9,11 +10,36 @@ import {
   FieldVersion,
   FieldReviewResult,
   SubtaskNodeData,
+  ReviewNodeData,
+  AssignmentBehavior,
   isSubtaskExecution,
   isReviewExecution
 } from '@/types';
-import { getNextNode, getFirstActionableNode } from './router';
+import { getNextNode, getFirstActionableNode, getEdge } from './router';
+import { getPipelineById } from '@/lib/data/pipelines';
 import { randomUUID } from 'crypto';
+
+function getAttemptCount(subtaskExec: SubtaskExecution): number {
+  if (subtaskExec.fieldHistories.length === 0) return 0;
+  return Math.max(...subtaskExec.fieldHistories.map(h => h.currentVersion));
+}
+
+function resolveAssignment(
+  behavior: AssignmentBehavior | undefined,
+  currentUserId: string,
+  previousCompletedBy: string | undefined
+): string | undefined {
+  if (!behavior || behavior === 'any') {
+    return undefined;
+  }
+  if (behavior === 'same_person') {
+    return previousCompletedBy;
+  }
+  if (behavior === 'different_person') {
+    return previousCompletedBy ? `not:${previousCompletedBy}` : undefined;
+  }
+  return undefined;
+}
 
 /**
  * Initialize node execution for a specific node
@@ -92,15 +118,12 @@ function findNodeExecution(execution: PipelineExecution, nodeId: string): NodeEx
   return nodeExec;
 }
 
-/**
- * Advance execution after subtask submission
- */
 export async function advanceAfterSubtask(
   execution: PipelineExecution,
   nodeId: string,
-  fieldValues: Record<string, string>
+  fieldValues: Record<string, string>,
+  userId: string = 'editor'
 ): Promise<PipelineExecution> {
-  // Find the subtask execution
   const nodeExec = findNodeExecution(execution, nodeId);
 
   if (!isSubtaskExecution(nodeExec)) {
@@ -109,27 +132,25 @@ export async function advanceAfterSubtask(
 
   const subtaskExec = nodeExec as SubtaskExecution;
 
-  // Create new versions for each field
   subtaskExec.fieldHistories.forEach(history => {
     const fieldValue = fieldValues[history.fieldId];
     if (fieldValue === undefined) {
       throw new Error(`Missing value for field ${history.fieldId}`);
     }
 
-    // Only create new version if this is a new submission or value changed
     const lastVersion = history.versions[history.versions.length - 1];
     const shouldCreateNewVersion =
-      !lastVersion || // First submission
-      lastVersion.status === 'rejected' || // Field was rejected, need new version
-      lastVersion.value !== fieldValue; // Value changed
+      !lastVersion ||
+      lastVersion.status === 'rejected' ||
+      lastVersion.value !== fieldValue;
 
     if (shouldCreateNewVersion) {
       const newVersion: FieldVersion = {
         version: history.currentVersion + 1,
         value: fieldValue,
         submittedAt: new Date().toISOString(),
-        submittedBy: 'editor', // TODO: Replace with actual user
-        status: 'pending' // Awaiting review
+        submittedBy: userId,
+        status: 'pending'
       };
       history.versions.push(newVersion);
       history.currentVersion = newVersion.version;
@@ -137,26 +158,30 @@ export async function advanceAfterSubtask(
   });
 
   subtaskExec.status = 'waiting_review';
+  subtaskExec.completedBy = userId;
   subtaskExec.lastUpdatedAt = new Date().toISOString();
 
-  // Move to next node (should be review node)
   const nextNode = await getNextNode(execution.pipelineId, nodeId);
+  const edge = await getEdge(execution.pipelineId, nodeId);
+  
   execution.currentNodeId = nextNode.id;
 
-  // Update next node status
   const nextExec = findNodeExecution(execution, nextNode.id);
   nextExec.status = 'in_progress';
+  
+  if (isReviewExecution(nextExec)) {
+    const assignmentBehavior = edge?.data?.assignmentBehavior;
+    nextExec.assignedTo = resolveAssignment(assignmentBehavior, userId, subtaskExec.completedBy);
+  }
 
   return execution;
 }
 
-/**
- * Advance execution after review
- */
 export async function advanceAfterReview(
   execution: PipelineExecution,
   nodeId: string,
-  fieldReviews: FieldReviewResult[]
+  fieldReviews: FieldReviewResult[],
+  userId: string = 'reviewer'
 ): Promise<PipelineExecution> {
   const nodeExec = findNodeExecution(execution, nodeId);
 
@@ -166,7 +191,6 @@ export async function advanceAfterReview(
 
   const reviewExec = nodeExec as ReviewExecution;
 
-  // Find the source subtask execution
   const subtaskExec = findNodeExecution(
     execution,
     reviewExec.sourceSubtaskNodeId
@@ -176,7 +200,6 @@ export async function advanceAfterReview(
     throw new Error(`Source node ${reviewExec.sourceSubtaskNodeId} is not a subtask`);
   }
 
-  // Apply review results to field versions
   let allAccepted = true;
   fieldReviews.forEach(review => {
     const history = subtaskExec.fieldHistories.find(h => h.fieldId === review.fieldId);
@@ -192,7 +215,7 @@ export async function advanceAfterReview(
     latestVersion.status = review.status;
     latestVersion.reviewComment = review.comment;
     latestVersion.reviewedAt = new Date().toISOString();
-    latestVersion.reviewedBy = 'reviewer'; // TODO: Replace with actual user
+    latestVersion.reviewedBy = userId;
 
     if (review.status === 'rejected') {
       allAccepted = false;
@@ -201,28 +224,51 @@ export async function advanceAfterReview(
 
   reviewExec.allFieldsAccepted = allAccepted;
   reviewExec.status = 'completed';
+  reviewExec.completedBy = userId;
   reviewExec.reviewedAt = new Date().toISOString();
 
-  // Route to next node based on review outcome
-  const edgeType = allAccepted ? 'accept' : 'reject';
+  let edgeType: 'accept' | 'reject' | 'max_attempts';
+
+  if (allAccepted) {
+    edgeType = 'accept';
+  } else {
+    const pipeline = await getPipelineById(execution.pipelineId);
+    const reviewNode = pipeline?.nodes.find(n => n.id === nodeId);
+    const maxAttempts = (reviewNode?.data as ReviewNodeData)?.maxAttempts;
+    
+    const attemptCount = getAttemptCount(subtaskExec);
+    
+    if (maxAttempts && attemptCount >= maxAttempts) {
+      edgeType = 'max_attempts';
+    } else {
+      edgeType = 'reject';
+    }
+  }
+
   const nextNode = await getNextNode(execution.pipelineId, nodeId, edgeType);
+  const edge = await getEdge(execution.pipelineId, nodeId, edgeType);
+  const assignmentBehavior = edge?.data?.assignmentBehavior;
+  
   execution.currentNodeId = nextNode.id;
 
   if (nextNode.type === 'subtask') {
-    // If routed back to subtask, mark as revision_needed
     subtaskExec.status = 'revision_needed';
     subtaskExec.lastUpdatedAt = new Date().toISOString();
+    subtaskExec.assignedTo = resolveAssignment(assignmentBehavior, userId, subtaskExec.completedBy);
   } else if (nextNode.type === 'end') {
-    // Pipeline completed
     execution.status = 'completed';
     execution.completedAt = new Date().toISOString();
     const endExec = findNodeExecution(execution, nextNode.id) as EndExecution;
     endExec.status = 'completed';
     endExec.completedAt = new Date().toISOString();
   } else {
-    // Next node is another subtask or review
     const nextExec = findNodeExecution(execution, nextNode.id);
     nextExec.status = 'pending';
+    if (isSubtaskExecution(nextExec)) {
+      nextExec.assignedTo = resolveAssignment(assignmentBehavior, userId, subtaskExec.completedBy);
+    } else if (isReviewExecution(nextExec)) {
+      nextExec.assignedTo = resolveAssignment(assignmentBehavior, userId, reviewExec.completedBy);
+    }
   }
 
   return execution;

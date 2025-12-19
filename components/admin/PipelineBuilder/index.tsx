@@ -31,9 +31,9 @@ export function PipelineBuilder({
   const [description, setDescription] = useState(initialDescription || '');
   const [nodes, setNodes] = useState<PipelineNode[]>(initialNodes);
   const [edges, setEdges] = useState<PipelineEdge[]>(initialEdges);
-  // Store only the node ID, not the whole node - this ensures we always get fresh data
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isPanelExpanded, setIsPanelExpanded] = useState(false);
 
   // Look up the selected node from current nodes state (always fresh)
   const selectedNode = useMemo(() => {
@@ -58,6 +58,16 @@ export function PipelineBuilder({
       )
     );
     setSelectedNodeId(null);
+    setIsPanelExpanded(false);
+  }, []);
+
+  const handleClosePanel = useCallback(() => {
+    setSelectedNodeId(null);
+    setIsPanelExpanded(false);
+  }, []);
+
+  const handleEdgesUpdate = useCallback((updatedEdges: PipelineEdge[]) => {
+    setEdges(updatedEdges);
   }, []);
 
   const handleValidate = useCallback(() => {
@@ -184,7 +194,7 @@ export function PipelineBuilder({
             onNodesChange={setNodes}
             onEdgesChange={setEdges}
             onNodeClick={handleNodeClick}
-            onPaneClick={() => setSelectedNodeId(null)}
+            onPaneClick={handleClosePanel}
           />
         </div>
 
@@ -193,17 +203,37 @@ export function PipelineBuilder({
           className={`
             flex-shrink-0 bg-gray-50 border-l border-gray-300 overflow-hidden
             transition-all duration-300 ease-in-out
-            ${selectedNode ? 'w-[500px]' : 'w-0'}
+            ${selectedNode 
+              ? isPanelExpanded 
+                ? 'w-[calc(100%-64px)]' 
+                : 'w-[500px]' 
+              : 'w-0'}
           `}
         >
           {selectedNode && (
-            <div className="h-full overflow-y-auto">
+            <div className="h-full overflow-y-auto relative">
+              {/* Expand/Collapse Button */}
+              <button
+                onClick={() => setIsPanelExpanded(!isPanelExpanded)}
+                className="absolute top-1 left-1 z-20 p-1 bg-white/90 border border-gray-200 rounded shadow-sm hover:bg-gray-100 transition-colors"
+                title={isPanelExpanded ? 'Collapse panel' : 'Expand panel'}
+              >
+                {isPanelExpanded ? (
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v5m0-5h5m6 6l5 5m0 0v-5m0 5h-5" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                  </svg>
+                )}
+              </button>
               {isStartNode(selectedNode) && (
                 <StartNodeConfigPanel
                   key={selectedNode.id}
                   node={selectedNode}
                   onUpdate={handleNodeUpdate}
-                  onClose={() => setSelectedNodeId(null)}
+                  onClose={handleClosePanel}
                 />
               )}
               {isSubtaskNode(selectedNode) && (
@@ -213,7 +243,7 @@ export function PipelineBuilder({
                   allNodes={nodes}
                   allEdges={edges}
                   onUpdate={handleNodeUpdate}
-                  onClose={() => setSelectedNodeId(null)}
+                  onClose={handleClosePanel}
                 />
               )}
               {isReviewNode(selectedNode) && (
@@ -223,7 +253,8 @@ export function PipelineBuilder({
                   allNodes={nodes}
                   allEdges={edges}
                   onUpdate={handleNodeUpdate}
-                  onClose={() => setSelectedNodeId(null)}
+                  onEdgesUpdate={handleEdgesUpdate}
+                  onClose={handleClosePanel}
                 />
               )}
               {isEndNode(selectedNode) && (
@@ -233,7 +264,7 @@ export function PipelineBuilder({
                   allNodes={nodes}
                   allEdges={edges}
                   onUpdate={handleNodeUpdate}
-                  onClose={() => setSelectedNodeId(null)}
+                  onClose={handleClosePanel}
                 />
               )}
             </div>
@@ -298,12 +329,14 @@ function ReviewNodeConfigPanel({
   allNodes,
   allEdges,
   onUpdate,
+  onEdgesUpdate,
   onClose,
 }: {
   node: PipelineNode & { type: 'review'; data: ReviewNodeData };
   allNodes: PipelineNode[];
   allEdges: PipelineEdge[];
   onUpdate: (nodeId: string, data: ReviewNodeData) => void;
+  onEdgesUpdate: (edges: PipelineEdge[]) => void;
   onClose: () => void;
 }) {
   return (
@@ -314,6 +347,7 @@ function ReviewNodeConfigPanel({
         allNodes={allNodes}
         allEdges={allEdges}
         onUpdate={onUpdate}
+        onEdgesUpdate={onEdgesUpdate}
         onClose={onClose}
       />
     </div>

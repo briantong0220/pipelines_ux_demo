@@ -2,13 +2,14 @@
 
 export type UserRole = 'admin' | 'editor' | 'reviewer';
 
-export type FieldType = 'text' | 'longtext' | 'instructions';
+export type FieldType = 'text' | 'longtext' | 'instructions' | 'dynamic';
 
 export interface TaskField {
-  id: string;              // UUID for field
-  label: string;           // Display label
-  type: FieldType;         // Field type
-  required?: boolean;      // Optional: mark as required
+  id: string;
+  label: string;
+  type: FieldType;
+  required?: boolean;
+  subfields?: TaskField[];
 }
 
 export interface Task {
@@ -80,10 +81,11 @@ export interface SubtaskNodeData extends Record<string, unknown> {
 }
 
 export interface ReviewNodeData extends Record<string, unknown> {
-  label: string;           // Node display name
-  description?: string;          // Instructions for reviewers
-  sourceSubtaskNodeId: string;   // Which subtask node this reviews
-  reviewableFieldIds?: string[]; // Which fields from the subtask should be reviewed (if undefined, all non-instruction fields)
+  label: string;
+  description?: string;
+  sourceSubtaskNodeId: string;
+  reviewableFieldIds?: string[];
+  maxAttempts?: number;
 }
 
 export interface EndNodeData extends Record<string, unknown> {
@@ -99,13 +101,18 @@ export interface PipelineNode {
   data: StartNodeData | SubtaskNodeData | ReviewNodeData | EndNodeData; // Type-specific data
 }
 
+export type AssignmentBehavior = 'any' | 'same_person' | 'different_person';
+
 export interface PipelineEdge {
-  id: string;                    // UUID for edge
-  source: string;                // Source node ID
-  target: string;                // Target node ID
-  label?: string;                // Edge label (e.g., "All Accepted", "Rejected")
-  type?: string;                 // Edge component type (e.g., 'deletable') or routing logic
-  data?: { type?: 'accept' | 'reject' };  // For review nodes: routing logic stored in data
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+  type?: string;
+  data?: { 
+    type?: 'accept' | 'reject' | 'max_attempts';
+    assignmentBehavior?: AssignmentBehavior;
+  };
 }
 
 export interface Pipeline {
@@ -145,21 +152,25 @@ export interface FieldExecutionHistory {
 }
 
 export interface SubtaskExecution {
-  nodeId: string;                // References PipelineNode.id
-  status: NodeExecutionStatus;   // Current status
-  fieldHistories: FieldExecutionHistory[]; // Version history per field
-  currentEditorAssignment?: string; // Editor working on it (if in_progress)
-  startedAt?: string;            // When first started
-  lastUpdatedAt?: string;        // Last activity timestamp
+  nodeId: string;
+  status: NodeExecutionStatus;
+  fieldHistories: FieldExecutionHistory[];
+  currentEditorAssignment?: string;
+  assignedTo?: string;
+  completedBy?: string;
+  startedAt?: string;
+  lastUpdatedAt?: string;
 }
 
 export interface ReviewExecution {
-  nodeId: string;                // References PipelineNode.id
-  status: NodeExecutionStatus;   // Current status
-  sourceSubtaskNodeId: string;   // Which subtask this reviews
-  currentReviewerAssignment?: string; // Reviewer working on it
-  reviewedAt?: string;           // When review completed
-  allFieldsAccepted: boolean;    // Routing decision flag
+  nodeId: string;
+  status: NodeExecutionStatus;
+  sourceSubtaskNodeId: string;
+  currentReviewerAssignment?: string;
+  assignedTo?: string;
+  completedBy?: string;
+  reviewedAt?: string;
+  allFieldsAccepted: boolean;
 }
 
 export interface EndExecution {
@@ -195,37 +206,42 @@ export interface AccumulatedField {
 }
 
 export interface EditorQueueItem {
-  executionId: string;           // PipelineExecution.id
-  pipelineId: string;            // Pipeline.id
-  pipelineName: string;          // Display name
-  nodeId: string;                // SubtaskNode.id
-  nodeLabel: string;             // Node display name
-  fields: TaskField[];           // Fields to fill (current subtask)
-  rejectedFieldIds?: string[];   // If revision, which fields need redo
-  existingFieldValues?: Record<string, string>; // Pre-filled accepted values
-  accumulatedFields?: AccumulatedField[]; // Fields from previous subtasks (read-only)
-  createdAt: string;             // For FIFO ordering
+  executionId: string;
+  pipelineId: string;
+  pipelineName: string;
+  nodeId: string;
+  nodeLabel: string;
+  fields: TaskField[];
+  rejectedFieldIds?: string[];
+  existingFieldValues?: Record<string, string>;
+  accumulatedFields?: AccumulatedField[];
+  createdAt: string;
+  assignmentBehavior?: AssignmentBehavior;
+  previousAssignee?: string;
 }
 
 export interface ReviewerQueueItem {
-  executionId: string;           // PipelineExecution.id
-  pipelineId: string;            // Pipeline.id
-  pipelineName: string;          // Display name
-  nodeId: string;                // ReviewNode.id
-  nodeLabel: string;             // Node display name
-  subtaskNodeId: string;         // Source subtask
-  fieldsToReview: FieldToReview[]; // What to review (current subtask)
-  accumulatedFields?: AccumulatedField[]; // Fields from previous subtasks (read-only)
-  createdAt: string;             // For FIFO ordering
+  executionId: string;
+  pipelineId: string;
+  pipelineName: string;
+  nodeId: string;
+  nodeLabel: string;
+  subtaskNodeId: string;
+  fieldsToReview: FieldToReview[];
+  accumulatedFields?: AccumulatedField[];
+  createdAt: string;
+  assignmentBehavior?: AssignmentBehavior;
+  previousAssignee?: string;
 }
 
 export interface FieldToReview {
-  fieldId: string;               // TaskField.id
-  fieldLabel: string;            // Display label
-  fieldType: FieldType;          // Field type
-  currentValue: string;          // Latest submitted value
-  version: number;               // Version number
-  previousReviewComments?: string[]; // Past comments (optional)
+  fieldId: string;
+  fieldLabel: string;
+  fieldType: FieldType;
+  currentValue: string;
+  version: number;
+  previousReviewComments?: string[];
+  subfields?: TaskField[];
 }
 
 // ============== FIELD REVIEW RESULT ==============
@@ -264,4 +280,29 @@ export function isReviewNode(node: PipelineNode): node is PipelineNode & { type:
 
 export function isEndNode(node: PipelineNode): node is PipelineNode & { type: 'end'; data: EndNodeData } {
   return node.type === 'end';
+}
+
+export interface TemplateNodeDefinition {
+  type: PipelineNodeType;
+  label: string;
+  position: { x: number; y: number };
+  data: StartNodeData | SubtaskNodeData | ReviewNodeData | EndNodeData;
+}
+
+export interface TemplateEdgeDefinition {
+  sourceIndex: number;
+  targetIndex: number;
+  data?: {
+    type?: 'accept' | 'reject' | 'max_attempts';
+  };
+}
+
+export interface PipelineTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category?: string;
+  nodeCount: number;
+  nodes: TemplateNodeDefinition[];
+  edges: TemplateEdgeDefinition[];
 }

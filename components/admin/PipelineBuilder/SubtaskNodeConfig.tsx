@@ -60,8 +60,109 @@ function getPriorSubtaskFields(
 const FIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string; description: string }[] = [
   { value: 'text', label: 'Short answer', icon: '━', description: 'Single line text' },
   { value: 'longtext', label: 'Paragraph', icon: '≡', description: 'Multi-line text' },
+  { value: 'dynamic', label: 'Dynamic input', icon: '+', description: 'Expandable multi-entry' },
   { value: 'instructions', label: 'Instructions', icon: 'ℹ', description: 'Read-only guidance' },
 ];
+
+const SUBFIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string }[] = [
+  { value: 'text', label: 'Short answer', icon: '━' },
+  { value: 'longtext', label: 'Paragraph', icon: '≡' },
+];
+
+interface DynamicSubfieldsConfigProps {
+  subfields: TaskField[];
+  onUpdate: (subfields: TaskField[]) => void;
+  isActive: boolean;
+}
+
+function DynamicSubfieldsConfig({ subfields, onUpdate, isActive }: DynamicSubfieldsConfigProps) {
+  const handleAddSubfield = (type: FieldType) => {
+    const newSubfield: TaskField = {
+      id: `subfield-${Date.now()}`,
+      label: '',
+      type,
+    };
+    onUpdate([...subfields, newSubfield]);
+  };
+
+  const handleUpdateSubfield = (subfieldId: string, updates: Partial<TaskField>) => {
+    onUpdate(subfields.map(sf => sf.id === subfieldId ? { ...sf, ...updates } : sf));
+  };
+
+  const handleDeleteSubfield = (subfieldId: string) => {
+    onUpdate(subfields.filter(sf => sf.id !== subfieldId));
+  };
+
+  return (
+    <div 
+      className={`mt-3 pt-3 border-t border-gray-100 ${isActive ? 'opacity-100' : 'opacity-70'}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Entry Structure</span>
+        <span className="text-xs text-gray-400">({subfields.length} field{subfields.length !== 1 ? 's' : ''})</span>
+      </div>
+
+      {subfields.length === 0 ? (
+        <div className="text-xs text-gray-400 mb-2 italic">
+          Define what each entry looks like
+        </div>
+      ) : (
+        <div className="space-y-2 mb-2">
+          {subfields.map((subfield, idx) => (
+            <div key={subfield.id} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
+              <span className="text-xs text-gray-400 w-4">{idx + 1}.</span>
+              <select
+                value={subfield.type}
+                onChange={(e) => handleUpdateSubfield(subfield.id, { type: e.target.value as FieldType })}
+                className="text-xs border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400"
+              >
+                {SUBFIELD_TYPE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.icon} {opt.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={subfield.label}
+                onChange={(e) => handleUpdateSubfield(subfield.id, { label: e.target.value })}
+                placeholder="Field label"
+                className="flex-1 text-sm border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400"
+              />
+              <button
+                type="button"
+                onClick={() => handleDeleteSubfield(subfield.id)}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {SUBFIELD_TYPE_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => handleAddSubfield(opt.value)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>{opt.icon}</span>
+            <span>{opt.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface FieldCardProps {
   field: TaskField;
@@ -126,16 +227,17 @@ function FieldCard({
       )}
 
       <div className="flex">
-        {/* Drag Handle */}
+        {/* Index + Drag Handle */}
         <div
           className={`
-            flex items-center justify-center w-8 cursor-grab active:cursor-grabbing
+            flex items-center justify-center gap-1 px-2 cursor-grab active:cursor-grabbing
             text-gray-300 hover:text-gray-500 transition-colors
-            ${isActive ? 'pl-2' : ''}
+            ${isActive ? 'pl-3' : ''}
           `}
           title="Drag to reorder"
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <span className="text-xs font-medium text-gray-400 w-4 text-center">{index + 1}</span>
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
             <circle cx="9" cy="6" r="1.5" />
             <circle cx="15" cy="6" r="1.5" />
             <circle cx="9" cy="12" r="1.5" />
@@ -236,8 +338,7 @@ function FieldCard({
               )}
             </div>
 
-            {/* Preview of input type */}
-            {field.type !== 'instructions' && (
+            {field.type !== 'instructions' && field.type !== 'dynamic' && (
               <div className="flex-1 max-w-xs">
                 {field.type === 'text' ? (
                   <div className="border-b border-gray-300 border-dotted pb-1 text-sm text-gray-400">
@@ -251,6 +352,14 @@ function FieldCard({
               </div>
             )}
           </div>
+
+          {field.type === 'dynamic' && (
+            <DynamicSubfieldsConfig
+              subfields={field.subfields || []}
+              onUpdate={(subfields) => onUpdate({ subfields })}
+              isActive={isActive}
+            />
+          )}
 
           {/* Action Buttons - Always visible on hover, expanded when active */}
           <div className={`
@@ -317,11 +426,6 @@ function FieldCard({
           </div>
         </div>
       </div>
-
-      {/* Field number indicator */}
-      <div className="absolute -left-5 top-4 w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-[10px] font-medium flex items-center justify-center">
-        {index + 1}
-      </div>
     </div>
   );
 }
@@ -363,11 +467,12 @@ function InstructionCard({
       `}
     >
       <div className="flex">
-        {/* Drag Handle */}
+        {/* Index + Drag Handle */}
         <div
-          className="flex items-center justify-center w-8 cursor-grab active:cursor-grabbing text-amber-300 hover:text-amber-500 transition-colors"
+          className="flex items-center justify-center gap-1 px-2 cursor-grab active:cursor-grabbing text-amber-300 hover:text-amber-500 transition-colors"
           title="Drag to reorder"
         >
+          <span className="text-xs font-medium text-amber-500 w-4 text-center">{index + 1}</span>
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
             <circle cx="9" cy="6" r="1.5" />
             <circle cx="15" cy="6" r="1.5" />
@@ -405,11 +510,6 @@ function InstructionCard({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-      </div>
-
-      {/* Index indicator */}
-      <div className="absolute -left-5 top-3 w-4 h-4 rounded-full bg-amber-200 text-amber-700 text-[10px] font-medium flex items-center justify-center">
-        {index + 1}
       </div>
     </div>
   );
@@ -631,7 +731,7 @@ export function SubtaskNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, 
           )}
 
           {/* Field Cards */}
-          <div className="space-y-3 pl-5">
+          <div className="space-y-3">
             {fields.length === 0 ? (
               <div
                 className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
@@ -686,7 +786,7 @@ export function SubtaskNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, 
 
           {/* Add Field Button */}
           {fields.length > 0 && (
-            <div className="mt-4 pl-5">
+            <div className="mt-4">
               <AddFieldButton onAdd={handleAddField} />
             </div>
           )}
@@ -858,12 +958,70 @@ function PreviewPane({ label, description, fields, priorSubtasks }: PreviewPaneP
               fields.map((field) => (
                 <div key={field.id}>
                   {field.type === 'instructions' ? (
-                    /* Instructions display - simple text */
                     <p className="text-sm text-gray-600 italic py-2 whitespace-pre-wrap">
                       {field.label || 'Instructions will appear here...'}
                     </p>
+                  ) : field.type === 'dynamic' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {field.label || 'Untitled field'}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                      <div className="space-y-3">
+                        <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-500">Entry 1</span>
+                            <button
+                              disabled
+                              className="p-1 text-gray-300 cursor-not-allowed"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                          {(!field.subfields || field.subfields.length === 0) ? (
+                            <p className="text-xs text-gray-400 italic">No sub-fields defined</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {field.subfields.map((subfield) => (
+                                <div key={subfield.id}>
+                                  <label className="block text-xs text-gray-500 mb-1">
+                                    {subfield.label || 'Untitled'}
+                                  </label>
+                                  {subfield.type === 'text' ? (
+                                    <input
+                                      type="text"
+                                      disabled
+                                      placeholder="Short answer"
+                                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded bg-white text-gray-400 cursor-not-allowed"
+                                    />
+                                  ) : (
+                                    <textarea
+                                      disabled
+                                      placeholder="Long answer"
+                                      rows={2}
+                                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded bg-white text-gray-400 cursor-not-allowed resize-none"
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          disabled
+                          className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 text-sm flex items-center justify-center gap-2 cursor-not-allowed"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add entry
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">Editors can add multiple entries</p>
+                    </div>
                   ) : (
-                    /* Input field display */
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         {field.label || 'Untitled field'}

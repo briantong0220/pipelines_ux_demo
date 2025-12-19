@@ -1,13 +1,216 @@
 'use client';
 
 import { useState } from 'react';
-import { EditorQueueItem, AccumulatedField } from '@/types';
+import { EditorQueueItem, AccumulatedField, TaskField } from '@/types';
 import Button from '@/components/ui/Button';
 
 interface SubtaskFormProps {
   queueItem: EditorQueueItem;
   onSubmitted: () => void;
   onCancel: () => void;
+}
+
+interface DynamicFieldInputProps {
+  field: TaskField;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  isRejected?: boolean;
+}
+
+type DynamicEntry = Record<string, string>;
+
+function DynamicFieldInput({ field, value, onChange, disabled, isRejected }: DynamicFieldInputProps) {
+  const subfields = field.subfields || [];
+  const hasSubfields = subfields.length > 0;
+
+  const createEmptyEntry = (): DynamicEntry => {
+    if (hasSubfields) {
+      const entry: DynamicEntry = {};
+      subfields.forEach(sf => { entry[sf.id] = ''; });
+      return entry;
+    }
+    return { _value: '' };
+  };
+
+  const parseEntries = (val: string): DynamicEntry[] => {
+    if (!val) return [createEmptyEntry()];
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        if (typeof parsed[0] === 'string') {
+          return parsed.map((s: string) => ({ _value: s }));
+        }
+        return parsed;
+      }
+      return [createEmptyEntry()];
+    } catch {
+      return val ? [{ _value: val }] : [createEmptyEntry()];
+    }
+  };
+
+  const entries = parseEntries(value);
+
+  const updateEntries = (newEntries: DynamicEntry[]) => {
+    onChange(JSON.stringify(newEntries));
+  };
+
+  const handleSubfieldChange = (entryIndex: number, subfieldId: string, newValue: string) => {
+    const newEntries = [...entries];
+    newEntries[entryIndex] = { ...newEntries[entryIndex], [subfieldId]: newValue };
+    updateEntries(newEntries);
+  };
+
+  const handleAddEntry = () => {
+    updateEntries([...entries, createEmptyEntry()]);
+  };
+
+  const handleRemoveEntry = (index: number) => {
+    if (entries.length <= 1) return;
+    const newEntries = entries.filter((_, i) => i !== index);
+    updateEntries(newEntries);
+  };
+
+  if (!hasSubfields) {
+    return (
+      <div className="space-y-2">
+        {entries.map((entry, index) => (
+          <div key={index} className="flex gap-2">
+            <input
+              type="text"
+              value={entry._value || ''}
+              onChange={(e) => handleSubfieldChange(index, '_value', e.target.value)}
+              disabled={disabled}
+              className={`
+                flex-1 px-4 py-3 border-2 rounded-lg transition-colors
+                focus:outline-none focus:ring-0
+                ${isRejected
+                  ? 'border-red-300 focus:border-red-500 bg-red-50'
+                  : disabled
+                    ? 'border-green-200 bg-green-50 text-gray-500'
+                    : 'border-gray-200 focus:border-blue-500'
+                }
+              `}
+              placeholder={`Entry ${index + 1}`}
+            />
+            {!disabled && entries.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleRemoveEntry(index)}
+                className="p-3 border-2 border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-300 hover:bg-red-50 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+          </div>
+        ))}
+        {!disabled && (
+          <button
+            type="button"
+            onClick={handleAddEntry}
+            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add entry
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {entries.map((entry, entryIndex) => (
+        <div
+          key={entryIndex}
+          className={`
+            border-2 rounded-lg p-4 transition-colors
+            ${isRejected
+              ? 'border-red-200 bg-red-50'
+              : disabled
+                ? 'border-green-200 bg-green-50'
+                : 'border-gray-200 bg-gray-50'
+            }
+          `}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Entry {entryIndex + 1}
+            </span>
+            {!disabled && entries.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleRemoveEntry(entryIndex)}
+                className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="space-y-3">
+            {subfields.map((subfield) => (
+              <div key={subfield.id}>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  {subfield.label || 'Untitled'}
+                </label>
+                {subfield.type === 'text' ? (
+                  <input
+                    type="text"
+                    value={entry[subfield.id] || ''}
+                    onChange={(e) => handleSubfieldChange(entryIndex, subfield.id, e.target.value)}
+                    disabled={disabled}
+                    className={`
+                      w-full px-3 py-2 border-2 rounded-lg transition-colors text-sm
+                      focus:outline-none focus:ring-0
+                      ${disabled
+                        ? 'border-green-200 bg-green-100 text-gray-500'
+                        : 'border-gray-200 bg-white focus:border-blue-500'
+                      }
+                    `}
+                    placeholder={`Enter ${(subfield.label || 'value').toLowerCase()}...`}
+                  />
+                ) : (
+                  <textarea
+                    value={entry[subfield.id] || ''}
+                    onChange={(e) => handleSubfieldChange(entryIndex, subfield.id, e.target.value)}
+                    disabled={disabled}
+                    rows={3}
+                    className={`
+                      w-full px-3 py-2 border-2 rounded-lg transition-colors text-sm resize-none
+                      focus:outline-none focus:ring-0
+                      ${disabled
+                        ? 'border-green-200 bg-green-100 text-gray-500'
+                        : 'border-gray-200 bg-white focus:border-blue-500'
+                      }
+                    `}
+                    placeholder={`Enter ${(subfield.label || 'value').toLowerCase()}...`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      {!disabled && (
+        <button
+          type="button"
+          onClick={handleAddEntry}
+          className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add entry
+        </button>
+      )}
+    </div>
+  );
 }
 
 // Group accumulated fields by their source node
@@ -69,8 +272,34 @@ export default function SubtaskForm({ queueItem, onSubmitted, onCancel }: Subtas
   const instructionFields = queueItem.fields.filter(f => f.type === 'instructions');
   const editableFields = queueItem.fields.filter(f => f.type !== 'instructions');
 
-  // Only check editable fields for completion
-  const allFieldsFilled = editableFields.every((field) => fieldValues[field.id]?.trim());
+  const isFieldFilled = (field: TaskField): boolean => {
+    const value = fieldValues[field.id];
+    if (!value) return false;
+    
+    if (field.type === 'dynamic') {
+      try {
+        const entries = JSON.parse(value);
+        if (!Array.isArray(entries) || entries.length === 0) return false;
+        
+        const subfields = field.subfields || [];
+        if (subfields.length > 0) {
+          return entries.some((entry: Record<string, string>) => 
+            subfields.some(sf => entry[sf.id]?.trim())
+          );
+        }
+        
+        if (typeof entries[0] === 'string') {
+          return entries.some((e: string) => e?.trim());
+        }
+        return entries.some((e: Record<string, string>) => e._value?.trim());
+      } catch {
+        return value.trim().length > 0;
+      }
+    }
+    return value.trim().length > 0;
+  };
+
+  const allFieldsFilled = editableFields.every(isFieldFilled);
   const groupedAccumulatedFields = queueItem.accumulatedFields
     ? groupFieldsByNode(queueItem.accumulatedFields)
     : null;
@@ -140,14 +369,56 @@ export default function SubtaskForm({ queueItem, onSubmitted, onCancel }: Subtas
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                     {fields[0].nodeLabel}
                   </p>
-                  {fields.map((field) => (
-                    <div key={field.fieldId} className="mb-3 last:mb-0">
-                      <p className="text-xs text-gray-500 mb-1">{field.fieldLabel}</p>
-                      <p className="text-sm text-gray-700 bg-gray-50 rounded px-3 py-2">
-                        {field.value || <span className="italic text-gray-400">Empty</span>}
-                      </p>
-                    </div>
-                  ))}
+                  {fields.map((field) => {
+                    let displayValue: React.ReactNode = field.value;
+                    if (field.value) {
+                      try {
+                        const parsed = JSON.parse(field.value);
+                        if (Array.isArray(parsed)) {
+                          if (typeof parsed[0] === 'string') {
+                            displayValue = (
+                              <div className="space-y-1">
+                                {parsed.map((entry: string, idx: number) => (
+                                  <div key={idx} className="flex items-start gap-2">
+                                    <span className="text-xs text-gray-400">{idx + 1}.</span>
+                                    <span>{entry || <span className="italic text-gray-400">Empty</span>}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          } else {
+                            displayValue = (
+                              <div className="space-y-2">
+                                {parsed.map((entry: Record<string, string>, idx: number) => (
+                                  <div key={idx} className="border-l-2 border-gray-300 pl-2">
+                                    <span className="text-xs text-gray-400">Entry {idx + 1}</span>
+                                    <div className="space-y-1 mt-1">
+                                      {Object.entries(entry).map(([key, val]) => (
+                                        <div key={key} className="text-xs">
+                                          <span className="text-gray-500">{key === '_value' ? 'Value' : key}:</span>{' '}
+                                          <span>{val || <span className="italic text-gray-400">Empty</span>}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                        }
+                      } catch {
+                        displayValue = field.value;
+                      }
+                    }
+                    return (
+                      <div key={field.fieldId} className="mb-3 last:mb-0">
+                        <p className="text-xs text-gray-500 mb-1">{field.fieldLabel}</p>
+                        <div className="text-sm text-gray-700 bg-gray-50 rounded px-3 py-2">
+                          {displayValue || <span className="italic text-gray-400">Empty</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -195,7 +466,15 @@ export default function SubtaskForm({ queueItem, onSubmitted, onCancel }: Subtas
                     </div>
                   )}
 
-                  {field.type === 'text' ? (
+                  {field.type === 'dynamic' ? (
+                    <DynamicFieldInput
+                      field={field}
+                      value={fieldValues[field.id] || ''}
+                      onChange={(value) => handleFieldChange(field.id, value)}
+                      disabled={isAccepted}
+                      isRejected={isRejected}
+                    />
+                  ) : field.type === 'text' ? (
                     <input
                       type="text"
                       value={fieldValues[field.id] || ''}
