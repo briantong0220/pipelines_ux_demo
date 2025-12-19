@@ -197,10 +197,10 @@ export default function SubtaskReviewForm({
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium text-gray-600">{field.fieldLabel}</span>
                           <span className={`text-xs px-2 py-0.5 rounded ${field.reviewStatus === 'accepted'
-                              ? 'bg-green-100 text-green-700'
-                              : field.reviewStatus === 'rejected'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-yellow-100 text-yellow-700'
+                            ? 'bg-green-100 text-green-700'
+                            : field.reviewStatus === 'rejected'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-yellow-100 text-yellow-700'
                             }`}>
                             {field.reviewStatus}
                           </span>

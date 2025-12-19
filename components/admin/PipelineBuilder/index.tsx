@@ -44,6 +44,14 @@ export function PipelineBuilder({
   const onDragStart = useCallback((event: React.DragEvent, nodeType: PipelineNodeType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
+
+    // Calculate offset from cursor to element's top-left corner
+    // This allows us to drop the node at the correct position
+    const target = event.target as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+    event.dataTransfer.setData('application/offset', JSON.stringify({ x: offsetX, y: offsetY }));
   }, []);
 
   const handleNodeClick = useCallback((node: PipelineNode) => {

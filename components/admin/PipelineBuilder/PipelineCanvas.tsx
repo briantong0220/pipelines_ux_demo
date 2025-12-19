@@ -106,18 +106,18 @@ export function PipelineCanvas({
 
   const onConnect = useCallback(
     (params: Connection) => {
-      const edgeType = params.sourceHandle === 'accept' 
-        ? 'accept' 
-        : params.sourceHandle === 'reject' 
-          ? 'reject' 
+      const edgeType = params.sourceHandle === 'accept'
+        ? 'accept'
+        : params.sourceHandle === 'reject'
+          ? 'reject'
           : params.sourceHandle === 'max_attempts'
             ? 'max_attempts'
             : undefined;
 
-      const edgeLabel = edgeType === 'max_attempts' 
-        ? 'Max Attempts' 
-        : edgeType 
-          ? edgeType.charAt(0).toUpperCase() + edgeType.slice(1) 
+      const edgeLabel = edgeType === 'max_attempts'
+        ? 'Max Attempts'
+        : edgeType
+          ? edgeType.charAt(0).toUpperCase() + edgeType.slice(1)
           : undefined;
 
       const newEdge: Edge = {
@@ -194,10 +194,25 @@ export function PipelineCanvas({
       const type = event.dataTransfer.getData('application/reactflow') as PipelineNodeType;
       if (!type) return;
 
+      // Get the drag offset to account for where the user grabbed the element
+      let offsetX = 0;
+      let offsetY = 0;
+      try {
+        const offsetData = event.dataTransfer.getData('application/offset');
+        if (offsetData) {
+          const offset = JSON.parse(offsetData);
+          offsetX = offset.x || 0;
+          offsetY = offset.y || 0;
+        }
+      } catch {
+        // Ignore parsing errors, use default offset of 0
+      }
+
       // screenToFlowPosition expects absolute screen coordinates
+      // Subtract the offset so the node appears where the user actually dropped it
       const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
+        x: event.clientX - offsetX,
+        y: event.clientY - offsetY,
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
