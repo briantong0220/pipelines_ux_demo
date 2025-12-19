@@ -2,7 +2,7 @@
 
 export type UserRole = 'admin' | 'editor' | 'reviewer';
 
-export type FieldType = 'text' | 'longtext' | 'instructions' | 'dynamic' | 'file';
+export type FieldType = 'text' | 'longtext' | 'instructions' | 'dynamic' | 'file' | 'multiple_choice';
 
 export interface TaskField {
   id: string;
@@ -13,6 +13,9 @@ export interface TaskField {
   // File upload options
   acceptedFileTypes?: string; // e.g., ".pdf,.doc,.docx" or "image/*"
   maxFileSizeMB?: number;
+  // Multiple choice options
+  options?: string[]; // Array of choices for multiple_choice type
+  allowMultiple?: boolean; // Allow selecting multiple options (checkboxes vs radio)
 }
 
 export interface Task {

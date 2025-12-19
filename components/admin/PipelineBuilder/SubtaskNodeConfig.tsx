@@ -60,6 +60,7 @@ function getPriorSubtaskFields(
 const FIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string; description: string }[] = [
   { value: 'text', label: 'Short answer', icon: '━', description: 'Single line text' },
   { value: 'longtext', label: 'Paragraph', icon: '≡', description: 'Multi-line text' },
+  { value: 'multiple_choice', label: 'Multiple choice', icon: '◉', description: 'Select from options' },
   { value: 'dynamic', label: 'Dynamic input', icon: '+', description: 'Expandable multi-entry' },
   { value: 'file', label: 'File upload', icon: '↑', description: 'Upload documents or images' },
   { value: 'instructions', label: 'Instructions', icon: 'ℹ', description: 'Read-only guidance' },
@@ -68,7 +69,112 @@ const FIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string; descr
 const SUBFIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string }[] = [
   { value: 'text', label: 'Short answer', icon: '━' },
   { value: 'longtext', label: 'Paragraph', icon: '≡' },
+  { value: 'multiple_choice', label: 'Multiple choice', icon: '◉' },
+  { value: 'file', label: 'File upload', icon: '↑' },
 ];
+
+interface MultipleChoiceConfigProps {
+  options: string[];
+  allowMultiple: boolean;
+  onUpdate: (options: string[], allowMultiple: boolean) => void;
+  isActive: boolean;
+}
+
+function MultipleChoiceConfig({ options, allowMultiple, onUpdate, isActive }: MultipleChoiceConfigProps) {
+  const handleAddOption = () => {
+    onUpdate([...options, ''], allowMultiple);
+  };
+
+  const handleUpdateOption = (index: number, value: string) => {
+    const newOptions = [...options];
+    newOptions[index] = value;
+    onUpdate(newOptions, allowMultiple);
+  };
+
+  const handleDeleteOption = (index: number) => {
+    if (options.length <= 1) return;
+    onUpdate(options.filter((_, i) => i !== index), allowMultiple);
+  };
+
+  // Ensure at least one option exists
+  const displayOptions = options.length === 0 ? [''] : options;
+
+  return (
+    <div
+      className={`mt-3 pt-3 border-t border-gray-100 ${isActive ? 'opacity-100' : 'opacity-70'}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Options</span>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <span className="text-xs text-gray-500">Allow multiple</span>
+          <button
+            type="button"
+            onClick={() => onUpdate(options, !allowMultiple)}
+            className={`
+              relative inline-flex h-5 w-9 items-center rounded-full transition-colors
+              ${allowMultiple ? 'bg-blue-500' : 'bg-gray-300'}
+            `}
+          >
+            <span
+              className={`
+                inline-block h-3 w-3 transform rounded-full bg-white shadow-md transition-transform
+                ${allowMultiple ? 'translate-x-5' : 'translate-x-1'}
+              `}
+            />
+          </button>
+        </label>
+      </div>
+
+      <div className="space-y-2 mb-2">
+        {displayOptions.map((option, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <span className="text-gray-400">
+              {allowMultiple ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" strokeWidth="2" />
+                </svg>
+              )}
+            </span>
+            <input
+              type="text"
+              value={option}
+              onChange={(e) => handleUpdateOption(idx, e.target.value)}
+              placeholder={`Option ${idx + 1}`}
+              className="flex-1 text-sm border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400"
+            />
+            {displayOptions.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleDeleteOption(idx)}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={handleAddOption}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+      >
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        <span>Add option</span>
+      </button>
+    </div>
+  );
+}
 
 interface DynamicSubfieldsConfigProps {
   subfields: TaskField[];
@@ -77,13 +183,19 @@ interface DynamicSubfieldsConfigProps {
 }
 
 function DynamicSubfieldsConfig({ subfields, onUpdate, isActive }: DynamicSubfieldsConfigProps) {
+  const [expandedSubfieldId, setExpandedSubfieldId] = useState<string | null>(null);
+
   const handleAddSubfield = (type: FieldType) => {
     const newSubfield: TaskField = {
       id: `subfield-${Date.now()}`,
       label: '',
       type,
+      options: type === 'multiple_choice' ? ['Option 1', 'Option 2'] : undefined,
     };
     onUpdate([...subfields, newSubfield]);
+    if (type === 'multiple_choice' || type === 'file') {
+      setExpandedSubfieldId(newSubfield.id);
+    }
   };
 
   const handleUpdateSubfield = (subfieldId: string, updates: Partial<TaskField>) => {
@@ -92,11 +204,14 @@ function DynamicSubfieldsConfig({ subfields, onUpdate, isActive }: DynamicSubfie
 
   const handleDeleteSubfield = (subfieldId: string) => {
     onUpdate(subfields.filter(sf => sf.id !== subfieldId));
+    if (expandedSubfieldId === subfieldId) {
+      setExpandedSubfieldId(null);
+    }
   };
 
   return (
     <div
-      className={`mt-3 pt-3 border-t border-gray-100 ${isActive ? 'opacity-100' : 'opacity-70'}`}
+      className={`mt-3 pt-3 border-t border-gray-100 overflow-hidden ${isActive ? 'opacity-100' : 'opacity-70'}`}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center gap-2 mb-2">
@@ -111,41 +226,162 @@ function DynamicSubfieldsConfig({ subfields, onUpdate, isActive }: DynamicSubfie
       ) : (
         <div className="space-y-2 mb-2">
           {subfields.map((subfield, idx) => (
-            <div key={subfield.id} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
-              <span className="text-xs text-gray-400 w-4">{idx + 1}.</span>
-              <select
-                value={subfield.type}
-                onChange={(e) => handleUpdateSubfield(subfield.id, { type: e.target.value as FieldType })}
-                className="text-xs border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400"
-              >
-                {SUBFIELD_TYPE_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.icon} {opt.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={subfield.label}
-                onChange={(e) => handleUpdateSubfield(subfield.id, { label: e.target.value })}
-                placeholder="Field label"
-                className="flex-1 text-sm border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400"
-              />
-              <button
-                type="button"
-                onClick={() => handleDeleteSubfield(subfield.id)}
-                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+            <div key={subfield.id} className="bg-gray-50 rounded-lg p-2 overflow-hidden">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs text-gray-400 w-4 flex-shrink-0">{idx + 1}.</span>
+                <select
+                  value={subfield.type}
+                  onChange={(e) => {
+                    const newType = e.target.value as FieldType;
+                    const updates: Partial<TaskField> = { type: newType };
+                    if (newType === 'multiple_choice' && !subfield.options) {
+                      updates.options = ['Option 1', 'Option 2'];
+                    }
+                    handleUpdateSubfield(subfield.id, updates);
+                    if (newType === 'multiple_choice' || newType === 'file') {
+                      setExpandedSubfieldId(subfield.id);
+                    }
+                  }}
+                  className="text-xs border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400 flex-shrink-0"
+                >
+                  {SUBFIELD_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.icon} {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={subfield.label}
+                  onChange={(e) => handleUpdateSubfield(subfield.id, { label: e.target.value })}
+                  placeholder="Field label"
+                  className="flex-1 min-w-0 text-sm border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400"
+                />
+                {(subfield.type === 'multiple_choice' || subfield.type === 'file') && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSubfieldId(expandedSubfieldId === subfield.id ? null : subfield.id)}
+                    className={`flex-shrink-0 p-1.5 rounded transition-colors ${expandedSubfieldId === subfield.id
+                      ? 'text-blue-500 bg-blue-50'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                      }`}
+                    title="Configure options"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSubfield(subfield.id)}
+                  className="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Expanded configuration for multiple_choice */}
+              {subfield.type === 'multiple_choice' && expandedSubfieldId === subfield.id && (
+                <div className="mt-2 p-2 bg-white rounded border border-gray-200">
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                    <span className="text-xs font-medium text-gray-500">Options</span>
+                    <label className="flex items-center gap-1 cursor-pointer ml-auto">
+                      <span className="text-xs text-gray-500">Multi</span>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateSubfield(subfield.id, { allowMultiple: !subfield.allowMultiple })}
+                        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${subfield.allowMultiple ? 'bg-blue-500' : 'bg-gray-300'}`}
+                      >
+                        <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow transition-transform ${subfield.allowMultiple ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </button>
+                    </label>
+                  </div>
+                  <div className="space-y-1">
+                    {(subfield.options || []).map((opt, optIdx) => (
+                      <div key={optIdx} className="flex items-center gap-1 min-w-0">
+                        <span className="text-gray-400 text-xs flex-shrink-0">
+                          {subfield.allowMultiple ? '☐' : '○'}
+                        </span>
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => {
+                            const newOptions = [...(subfield.options || [])];
+                            newOptions[optIdx] = e.target.value;
+                            handleUpdateSubfield(subfield.id, { options: newOptions });
+                          }}
+                          placeholder={`Opt ${optIdx + 1}`}
+                          className="flex-1 min-w-0 text-xs border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:border-blue-400"
+                        />
+                        {(subfield.options || []).length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newOptions = (subfield.options || []).filter((_, i) => i !== optIdx);
+                              handleUpdateSubfield(subfield.id, { options: newOptions });
+                            }}
+                            className="p-0.5 text-gray-400 hover:text-red-500 rounded flex-shrink-0"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newOptions = [...(subfield.options || []), ''];
+                      handleUpdateSubfield(subfield.id, { options: newOptions });
+                    }}
+                    className="mt-1 text-xs text-blue-500 hover:text-blue-600"
+                  >
+                    + Add
+                  </button>
+                </div>
+              )}
+
+              {/* Expanded configuration for file */}
+              {subfield.type === 'file' && expandedSubfieldId === subfield.id && (
+                <div className="mt-2 p-2 bg-white rounded border border-gray-200">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <label className="block text-xs text-gray-500 mb-0.5">Types</label>
+                      <input
+                        type="text"
+                        value={subfield.acceptedFileTypes || ''}
+                        onChange={(e) => handleUpdateSubfield(subfield.id, { acceptedFileTypes: e.target.value || undefined })}
+                        placeholder=".pdf,.doc"
+                        className="w-full text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-400"
+                      />
+                    </div>
+                    <div className="w-16 flex-shrink-0">
+                      <label className="block text-xs text-gray-500 mb-0.5">Max MB</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={subfield.maxFileSizeMB || ''}
+                        onChange={(e) => handleUpdateSubfield(subfield.id, { maxFileSizeMB: e.target.value ? parseInt(e.target.value) : undefined })}
+                        placeholder="10"
+                        className="w-full text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {SUBFIELD_TYPE_OPTIONS.map(opt => (
           <button
             key={opt.value}
@@ -213,7 +449,7 @@ function FieldCard({
       onDragEnd={onDragEnd}
       onClick={onActivate}
       className={`
-        group relative bg-white rounded-lg border-2 transition-all duration-200 cursor-pointer
+        group relative bg-white rounded-lg border-2 transition-all duration-200 cursor-pointer overflow-hidden
         ${isActive
           ? 'border-blue-500 shadow-lg ring-2 ring-blue-100'
           : 'border-gray-200 hover:border-gray-300 shadow-sm'
@@ -227,11 +463,11 @@ function FieldCard({
         <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-lg" />
       )}
 
-      <div className="flex">
+      <div className="flex min-w-0">
         {/* Index + Drag Handle */}
         <div
           className={`
-            flex items-center justify-center gap-1 px-2 cursor-grab active:cursor-grabbing
+            flex-shrink-0 flex items-center justify-center gap-1 px-2 cursor-grab active:cursor-grabbing
             text-gray-300 hover:text-gray-500 transition-colors
             ${isActive ? 'pl-3' : ''}
           `}
@@ -249,7 +485,7 @@ function FieldCard({
         </div>
 
         {/* Field Content */}
-        <div className="flex-1 p-4 pl-2">
+        <div className="flex-1 min-w-0 p-4 pl-2 overflow-hidden">
           {/* Field Label Input */}
           <input
             ref={inputRef}
@@ -339,7 +575,7 @@ function FieldCard({
               )}
             </div>
 
-            {field.type !== 'instructions' && field.type !== 'dynamic' && field.type !== 'file' && (
+            {field.type !== 'instructions' && field.type !== 'dynamic' && field.type !== 'file' && field.type !== 'multiple_choice' && (
               <div className="flex-1 max-w-xs">
                 {field.type === 'text' ? (
                   <div className="border-b border-gray-300 border-dotted pb-1 text-sm text-gray-400">
@@ -350,6 +586,15 @@ function FieldCard({
                     Long answer text
                   </div>
                 )}
+              </div>
+            )}
+
+            {field.type === 'multiple_choice' && (
+              <div className="flex-1 max-w-xs">
+                <div className="text-sm text-gray-400">
+                  {(field.options?.length || 0)} option{(field.options?.length || 0) !== 1 ? 's' : ''}
+                  {field.allowMultiple && ' (multi-select)'}
+                </div>
               </div>
             )}
 
@@ -400,6 +645,15 @@ function FieldCard({
                 />
               </div>
             </div>
+          )}
+
+          {field.type === 'multiple_choice' && (
+            <MultipleChoiceConfig
+              options={field.options || []}
+              allowMultiple={field.allowMultiple || false}
+              onUpdate={(options, allowMultiple) => onUpdate({ options, allowMultiple })}
+              isActive={isActive}
+            />
           )}
 
           {/* Action Buttons - Always visible on hover, expanded when active */}
@@ -1029,6 +1283,27 @@ function PreviewPane({ label, description, fields, priorSubtasks, hidePriorField
                                       placeholder="Short answer"
                                       className="w-full px-3 py-2 text-sm border border-gray-200 rounded bg-white text-gray-400 cursor-not-allowed"
                                     />
+                                  ) : subfield.type === 'multiple_choice' ? (
+                                    <div className="space-y-1 p-2 bg-white rounded border border-gray-200">
+                                      {(subfield.options || ['Option 1', 'Option 2']).slice(0, 3).map((opt, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 text-xs text-gray-400">
+                                          <span>{subfield.allowMultiple ? '☐' : '○'}</span>
+                                          <span>{opt || `Option ${idx + 1}`}</span>
+                                        </div>
+                                      ))}
+                                      {(subfield.options || []).length > 3 && (
+                                        <div className="text-xs text-gray-400 pl-5">
+                                          +{(subfield.options || []).length - 3} more...
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : subfield.type === 'file' ? (
+                                    <div className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 text-xs text-gray-400">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                      </svg>
+                                      <span>Upload file</span>
+                                    </div>
                                   ) : (
                                     <textarea
                                       disabled
@@ -1053,6 +1328,45 @@ function PreviewPane({ label, description, fields, priorSubtasks, hidePriorField
                         </button>
                       </div>
                       <p className="text-xs text-gray-400 mt-2">Editors can add multiple entries</p>
+                    </div>
+                  ) : field.type === 'multiple_choice' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {field.label || 'Untitled field'}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                      <div className="space-y-2 p-3 border border-gray-300 rounded-lg bg-gray-50">
+                        {(field.options || ['Option 1', 'Option 2']).map((option, idx) => (
+                          <div key={idx} className="flex items-center gap-3 p-2 rounded-lg bg-white">
+                            {field.allowMultiple ? (
+                              <div className="w-5 h-5 rounded border-2 border-gray-300" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                            )}
+                            <span className="text-sm text-gray-600">{option || `Option ${idx + 1}`}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {field.allowMultiple && (
+                        <p className="text-xs text-gray-400 mt-1">Select one or more options</p>
+                      )}
+                    </div>
+                  ) : field.type === 'file' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {field.label || 'Untitled field'}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                        <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p className="text-sm text-gray-500">Click to upload</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {field.acceptedFileTypes || 'Any file type'}
+                          {field.maxFileSizeMB && ` (max ${field.maxFileSizeMB}MB)`}
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <div>

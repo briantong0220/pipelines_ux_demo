@@ -163,12 +163,12 @@ export async function advanceAfterSubtask(
 
   const nextNode = await getNextNode(execution.pipelineId, nodeId);
   const edge = await getEdge(execution.pipelineId, nodeId);
-  
+
   execution.currentNodeId = nextNode.id;
 
   const nextExec = findNodeExecution(execution, nextNode.id);
   nextExec.status = 'in_progress';
-  
+
   if (isReviewExecution(nextExec)) {
     const assignmentBehavior = edge?.data?.assignmentBehavior;
     nextExec.assignedTo = resolveAssignment(assignmentBehavior, userId, subtaskExec.completedBy);
@@ -235,9 +235,9 @@ export async function advanceAfterReview(
     const pipeline = await getPipelineById(execution.pipelineId);
     const reviewNode = pipeline?.nodes.find(n => n.id === nodeId);
     const maxAttempts = (reviewNode?.data as ReviewNodeData)?.maxAttempts;
-    
+
     const attemptCount = getAttemptCount(subtaskExec);
-    
+
     if (maxAttempts && attemptCount >= maxAttempts) {
       edgeType = 'max_attempts';
     } else {
@@ -248,7 +248,7 @@ export async function advanceAfterReview(
   const nextNode = await getNextNode(execution.pipelineId, nodeId, edgeType);
   const edge = await getEdge(execution.pipelineId, nodeId, edgeType);
   const assignmentBehavior = edge?.data?.assignmentBehavior;
-  
+
   execution.currentNodeId = nextNode.id;
 
   if (nextNode.type === 'subtask') {

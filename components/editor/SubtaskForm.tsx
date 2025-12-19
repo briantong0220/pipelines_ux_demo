@@ -175,6 +175,20 @@ function DynamicFieldInput({ field, value, onChange, disabled, isRejected }: Dyn
                     `}
                     placeholder={`Enter ${(subfield.label || 'value').toLowerCase()}...`}
                   />
+                ) : subfield.type === 'multiple_choice' ? (
+                  <DynamicSubfieldMultipleChoice
+                    subfield={subfield}
+                    value={entry[subfield.id] || ''}
+                    onChange={(val) => handleSubfieldChange(entryIndex, subfield.id, val)}
+                    disabled={disabled}
+                  />
+                ) : subfield.type === 'file' ? (
+                  <DynamicSubfieldFile
+                    subfield={subfield}
+                    value={entry[subfield.id] || ''}
+                    onChange={(val) => handleSubfieldChange(entryIndex, subfield.id, val)}
+                    disabled={disabled}
+                  />
                 ) : (
                   <textarea
                     value={entry[subfield.id] || ''}
@@ -208,6 +222,255 @@ function DynamicFieldInput({ field, value, onChange, disabled, isRejected }: Dyn
           </svg>
           Add entry
         </button>
+      )}
+    </div>
+  );
+}
+
+// Helper component for multiple choice within dynamic field entries
+function DynamicSubfieldMultipleChoice({
+  subfield,
+  value,
+  onChange,
+  disabled
+}: {
+  subfield: TaskField;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  const options = subfield.options || [];
+  const allowMultiple = subfield.allowMultiple || false;
+
+  const parseValue = (): string[] => {
+    if (!value) return [];
+    if (allowMultiple) {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [value];
+      } catch {
+        return value ? [value] : [];
+      }
+    }
+    return value ? [value] : [];
+  };
+
+  const selectedValues = parseValue();
+
+  const handleSelect = (option: string) => {
+    if (disabled) return;
+    if (allowMultiple) {
+      const newValues = selectedValues.includes(option)
+        ? selectedValues.filter(v => v !== option)
+        : [...selectedValues, option];
+      onChange(JSON.stringify(newValues));
+    } else {
+      onChange(option);
+    }
+  };
+
+  return (
+    <div className={`space-y-1 p-2 rounded-lg ${disabled ? 'bg-green-100' : 'bg-white border border-gray-200'}`}>
+      {options.map((option, idx) => {
+        const isSelected = selectedValues.includes(option);
+        return (
+          <label
+            key={idx}
+            className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm ${disabled ? 'cursor-not-allowed' : 'hover:bg-gray-50'
+              } ${isSelected ? 'font-medium' : ''}`}
+          >
+            {allowMultiple ? (
+              <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'
+                }`}>
+                {isSelected && (
+                  <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            ) : (
+              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-blue-500' : 'border-gray-300 bg-white'
+                }`}>
+                {isSelected && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+              </div>
+            )}
+            <input
+              type={allowMultiple ? 'checkbox' : 'radio'}
+              checked={isSelected}
+              onChange={() => handleSelect(option)}
+              disabled={disabled}
+              className="sr-only"
+            />
+            <span className="text-gray-700">{option}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+// Helper component for file upload within dynamic field entries
+function DynamicSubfieldFile({
+  subfield,
+  value,
+  onChange,
+  disabled
+}: {
+  subfield: TaskField;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onChange(file.name);
+    }
+  };
+
+  return (
+    <div className={`p-2 rounded-lg border ${disabled ? 'bg-green-100 border-green-200' : 'bg-white border-gray-200'}`}>
+      {value ? (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="text-sm text-gray-700">{value}</span>
+          </div>
+          {!disabled && (
+            <button type="button" onClick={() => onChange('')} className="text-gray-400 hover:text-red-500">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      ) : (
+        <label className={`flex items-center justify-center gap-2 py-2 cursor-pointer ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}>
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <span className="text-xs text-gray-500">Upload file</span>
+          <input
+            type="file"
+            className="hidden"
+            accept={subfield.acceptedFileTypes}
+            onChange={handleFileChange}
+            disabled={disabled}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
+interface MultipleChoiceFieldInputProps {
+  field: TaskField;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  isRejected?: boolean;
+}
+
+function MultipleChoiceFieldInput({ field, value, onChange, disabled, isRejected }: MultipleChoiceFieldInputProps) {
+  const options = field.options || [];
+  const allowMultiple = field.allowMultiple || false;
+
+  // Parse value - for multiple, it's JSON array; for single, it's a string
+  const parseValue = (): string[] => {
+    if (!value) return [];
+    if (allowMultiple) {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [value];
+      } catch {
+        return value ? [value] : [];
+      }
+    }
+    return value ? [value] : [];
+  };
+
+  const selectedValues = parseValue();
+
+  const handleSelect = (option: string) => {
+    if (disabled) return;
+
+    if (allowMultiple) {
+      const newValues = selectedValues.includes(option)
+        ? selectedValues.filter(v => v !== option)
+        : [...selectedValues, option];
+      onChange(JSON.stringify(newValues));
+    } else {
+      onChange(option);
+    }
+  };
+
+  return (
+    <div
+      className={`
+        space-y-2 p-3 border-2 rounded-lg transition-colors
+        ${isRejected
+          ? 'border-red-200 bg-red-50'
+          : disabled
+            ? 'border-green-200 bg-green-50'
+            : 'border-gray-200 bg-gray-50'
+        }
+      `}
+    >
+      {options.map((option, idx) => {
+        const isSelected = selectedValues.includes(option);
+        return (
+          <label
+            key={idx}
+            className={`
+              flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
+              ${disabled ? 'cursor-not-allowed' : 'hover:bg-white'}
+              ${isSelected ? 'bg-white shadow-sm' : ''}
+            `}
+          >
+            {allowMultiple ? (
+              <div className={`
+                w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
+                ${isSelected
+                  ? 'bg-blue-500 border-blue-500'
+                  : 'border-gray-300 bg-white'
+                }
+              `}>
+                {isSelected && (
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            ) : (
+              <div className={`
+                w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
+                ${isSelected
+                  ? 'border-blue-500'
+                  : 'border-gray-300 bg-white'
+                }
+              `}>
+                {isSelected && (
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                )}
+              </div>
+            )}
+            <input
+              type={allowMultiple ? 'checkbox' : 'radio'}
+              checked={isSelected}
+              onChange={() => handleSelect(option)}
+              disabled={disabled}
+              className="sr-only"
+            />
+            <span className={`text-sm ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+              {option}
+            </span>
+          </label>
+        );
+      })}
+      {options.length === 0 && (
+        <p className="text-sm text-gray-400 italic">No options configured</p>
       )}
     </div>
   );
@@ -549,6 +812,14 @@ export default function SubtaskForm({ queueItem, onSubmitted, onCancel }: Subtas
                     />
                   ) : field.type === 'file' ? (
                     <FileFieldInput
+                      field={field}
+                      value={fieldValues[field.id] || ''}
+                      onChange={(value) => handleFieldChange(field.id, value)}
+                      disabled={isAccepted}
+                      isRejected={isRejected}
+                    />
+                  ) : field.type === 'multiple_choice' ? (
+                    <MultipleChoiceFieldInput
                       field={field}
                       value={fieldValues[field.id] || ''}
                       onChange={(value) => handleFieldChange(field.id, value)}
