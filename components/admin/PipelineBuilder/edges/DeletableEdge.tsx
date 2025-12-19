@@ -6,8 +6,12 @@ import {
   EdgeLabelRenderer,
   EdgeProps,
   getBezierPath,
+  getSmoothStepPath,
+  getStraightPath,
   useReactFlow,
 } from '@xyflow/react';
+
+export type EdgePathType = 'bezier' | 'smoothstep' | 'straight';
 
 function DeletableEdge({
   id,
@@ -23,14 +27,41 @@ function DeletableEdge({
 }: EdgeProps) {
   const { deleteElements } = useReactFlow();
   const [isHovered, setIsHovered] = useState(false);
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+
+  // Get path type from data, default to bezier
+  const pathType = (data as { pathType?: EdgePathType })?.pathType || 'bezier';
+
+  const getEdgePath = () => {
+    if (pathType === 'smoothstep') {
+      return getSmoothStepPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+        borderRadius: 8,
+      });
+    } else if (pathType === 'straight') {
+      return getStraightPath({
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+      });
+    } else {
+      return getBezierPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+      });
+    }
+  };
+
+  const [edgePath, labelX, labelY] = getEdgePath();
 
   const onEdgeClick = () => {
     deleteElements({ edges: [{ id }] });

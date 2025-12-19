@@ -23,7 +23,7 @@ import { StartNode } from './nodes/StartNode';
 import { SubtaskNode } from './nodes/SubtaskNode';
 import { ReviewNode } from './nodes/ReviewNode';
 import { EndNode } from './nodes/EndNode';
-import DeletableEdge from './edges/DeletableEdge';
+import DeletableEdge, { EdgePathType } from './edges/DeletableEdge';
 import { PipelineNode, PipelineEdge, PipelineNodeType } from '@/types';
 
 const nodeTypes: NodeTypes = {
@@ -59,6 +59,7 @@ export function PipelineCanvas({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const [edgePathType, setEdgePathType] = useState<EdgePathType>('bezier');
 
   // Track if we're syncing from external to prevent feedback loops
   const isSyncingFromExternal = useRef(false);
@@ -351,11 +352,20 @@ export function PipelineCanvas({
     [onEdgesChangeInternal, onEdgesChange]
   );
 
+  // Add pathType to edge data for rendering
+  const edgesWithPathType = edges.map(edge => ({
+    ...edge,
+    data: {
+      ...edge.data,
+      pathType: edgePathType,
+    },
+  }));
+
   return (
-    <div ref={reactFlowWrapper} className="w-full h-full bg-gray-50">
+    <div ref={reactFlowWrapper} className="w-full h-full bg-gray-50 relative">
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={edgesWithPathType}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
@@ -387,6 +397,46 @@ export function PipelineCanvas({
           }}
         />
       </ReactFlow>
+
+      {/* Edge Path Type Toggle */}
+      <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md border border-gray-200 p-1 flex gap-1">
+        <button
+          onClick={() => setEdgePathType('bezier')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${edgePathType === 'bezier'
+            ? 'bg-blue-500 text-white'
+            : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          title="Curved edges"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 20 C 10 20, 14 4, 20 4" />
+          </svg>
+        </button>
+        <button
+          onClick={() => setEdgePathType('smoothstep')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${edgePathType === 'smoothstep'
+            ? 'bg-blue-500 text-white'
+            : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          title="Stepped edges"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 20 L 4 12 L 20 12 L 20 4" />
+          </svg>
+        </button>
+        <button
+          onClick={() => setEdgePathType('straight')}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${edgePathType === 'straight'
+            ? 'bg-blue-500 text-white'
+            : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          title="Straight edges"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 20 L 20 4" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
