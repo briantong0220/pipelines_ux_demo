@@ -213,6 +213,79 @@ function DynamicFieldInput({ field, value, onChange, disabled, isRejected }: Dyn
   );
 }
 
+interface FileFieldInputProps {
+  field: TaskField;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  isRejected?: boolean;
+}
+
+function FileFieldInput({ field, value, onChange, disabled, isRejected }: FileFieldInputProps) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // For now, store the file name as the value
+      // In a real implementation, you would upload to a storage service
+      onChange(file.name);
+    }
+  };
+
+  return (
+    <div
+      className={`
+        border-2 rounded-lg p-4 transition-colors
+        ${isRejected
+          ? 'border-red-200 bg-red-50'
+          : disabled
+            ? 'border-green-200 bg-green-50'
+            : 'border-gray-200 bg-gray-50'
+        }
+      `}
+    >
+      {value ? (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="text-sm text-gray-700">{value}</span>
+          </div>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              className="text-gray-400 hover:text-red-500 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      ) : (
+        <label className={`flex flex-col items-center justify-center cursor-pointer ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}>
+          <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <span className="text-sm text-gray-500 mb-1">Click to upload</span>
+          <span className="text-xs text-gray-400">
+            {field.acceptedFileTypes || 'Any file type'}
+            {field.maxFileSizeMB && ` (max ${field.maxFileSizeMB}MB)`}
+          </span>
+          <input
+            type="file"
+            className="hidden"
+            accept={field.acceptedFileTypes}
+            onChange={handleFileChange}
+            disabled={disabled}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
 // Group accumulated fields by their source node
 function groupFieldsByNode(fields: AccumulatedField[]): Map<string, AccumulatedField[]> {
   const grouped = new Map<string, AccumulatedField[]>();
@@ -275,19 +348,19 @@ export default function SubtaskForm({ queueItem, onSubmitted, onCancel }: Subtas
   const isFieldFilled = (field: TaskField): boolean => {
     const value = fieldValues[field.id];
     if (!value) return false;
-    
+
     if (field.type === 'dynamic') {
       try {
         const entries = JSON.parse(value);
         if (!Array.isArray(entries) || entries.length === 0) return false;
-        
+
         const subfields = field.subfields || [];
         if (subfields.length > 0) {
-          return entries.some((entry: Record<string, string>) => 
+          return entries.some((entry: Record<string, string>) =>
             subfields.some(sf => entry[sf.id]?.trim())
           );
         }
-        
+
         if (typeof entries[0] === 'string') {
           return entries.some((e: string) => e?.trim());
         }
