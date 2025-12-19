@@ -81,6 +81,7 @@ export interface SubtaskNodeData extends Record<string, unknown> {
   label: string;           // Node display name
   fields: TaskField[];     // Fields editors need to fill
   description?: string;    // Instructions for editors
+  hidePriorFields?: boolean; // Hide accumulated fields from previous subtasks
 }
 
 export interface ReviewNodeData extends Record<string, unknown> {
@@ -112,7 +113,7 @@ export interface PipelineEdge {
   target: string;
   label?: string;
   type?: string;
-  data?: { 
+  data?: {
     type?: 'accept' | 'reject' | 'max_attempts';
     assignmentBehavior?: AssignmentBehavior;
   };

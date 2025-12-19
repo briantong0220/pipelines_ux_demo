@@ -11,8 +11,75 @@ import {
   ReviewExecution,
   SubtaskNodeData,
   ReviewNodeData,
+  TaskField,
 } from '@/types';
 import Button from '@/components/ui/Button';
+
+// Helper component to render field values, including dynamic fields
+function FieldValueDisplay({ value, subfields }: { value: string; subfields?: TaskField[] }) {
+  if (!value) {
+    return <span className="italic text-gray-400">Empty</span>;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      const hasSubfields = subfields && subfields.length > 0;
+
+      if (typeof parsed[0] === 'string') {
+        return (
+          <div className="space-y-1">
+            {parsed.map((entry: string, idx: number) => (
+              <div key={idx} className="flex items-start gap-2">
+                <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-medium">
+                  {idx + 1}
+                </span>
+                <span className="text-gray-700">
+                  {entry || <span className="text-gray-400 italic">Empty</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-2">
+          {parsed.map((entry: Record<string, string>, idx: number) => (
+            <div key={idx} className="border-l-2 border-gray-200 pl-3">
+              <span className="text-xs text-gray-500 font-medium">Entry {idx + 1}</span>
+              <div className="mt-1 space-y-1">
+                {hasSubfields ? (
+                  subfields.map((subfield) => (
+                    <div key={subfield.id} className="text-sm">
+                      <span className="text-gray-500">{subfield.label || subfield.id}:</span>{' '}
+                      <span className="text-gray-700">
+                        {entry[subfield.id] || <span className="text-gray-400 italic">Empty</span>}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  Object.entries(entry).map(([key, val]) => (
+                    <div key={key} className="text-sm">
+                      <span className="text-gray-500">{key === '_value' ? 'Value' : key}:</span>{' '}
+                      <span className="text-gray-700">
+                        {val || <span className="text-gray-400 italic">Empty</span>}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+  } catch {
+    // Not JSON, display as plain text
+  }
+
+  return <span className="whitespace-pre-wrap">{value}</span>;
+}
 
 interface ExecutionDetailViewProps {
   executionId: string;
@@ -82,7 +149,6 @@ export default function ExecutionDetailView({ executionId, onClose }: ExecutionD
   const buildTimeline = (): TimelineItem[] => {
     const timeline: TimelineItem[] = [];
     const nodeMap = new Map(pipeline.nodes.map(n => [n.id, n]));
-    const edgeMap = new Map(pipeline.edges.map(e => [e.source, e]));
 
     // Find start node
     const startNode = pipeline.nodes.find(n => n.type === 'start');
@@ -110,15 +176,25 @@ export default function ExecutionDetailView({ executionId, onClose }: ExecutionD
         }
       }
 
-      // Find next node (for review nodes with accept/reject, follow accept path for display)
-      const edge = edgeMap.get(currentNodeId);
-      if (edge) {
-        currentNodeId = edge.target;
+      // Find next node - get all outgoing edges from current node
+      const outgoingEdges = pipeline.edges.filter(e => e.source === currentNodeId);
+
+      if (outgoingEdges.length === 0) {
+        // No more edges, we've reached the end
+        currentNodeId = undefined;
+      } else if (outgoingEdges.length === 1) {
+        // Single edge, just follow it
+        currentNodeId = outgoingEdges[0].target;
       } else {
-        // Check for review node edges
-        const reviewEdges = pipeline.edges.filter(e => e.source === currentNodeId);
-        const acceptEdge = reviewEdges.find(e => e.data?.type === 'accept');
-        currentNodeId = acceptEdge?.target || reviewEdges[0]?.target;
+        // Multiple edges (review node) - follow the accept path for forward traversal
+        const acceptEdge = outgoingEdges.find(e => e.data?.type === 'accept');
+        if (acceptEdge) {
+          currentNodeId = acceptEdge.target;
+        } else {
+          // Fallback: find an edge that goes to an unvisited node
+          const forwardEdge = outgoingEdges.find(e => !visited.has(e.target));
+          currentNodeId = forwardEdge?.target || outgoingEdges[0].target;
+        }
       }
     }
 
@@ -135,6 +211,15 @@ export default function ExecutionDetailView({ executionId, onClose }: ExecutionD
       return field?.label || fieldId;
     }
     return fieldId;
+  };
+
+  const getFieldDefinition = (nodeId: string, fieldId: string): TaskField | undefined => {
+    const node = pipeline.nodes.find(n => n.id === nodeId);
+    if (node?.type === 'subtask') {
+      const data = node.data as SubtaskNodeData;
+      return data.fields.find(f => f.id === fieldId);
+    }
+    return undefined;
   };
 
   // Get display status for a subtask - if pipeline is completed, show "completed" for all done subtasks
@@ -247,6 +332,7 @@ export default function ExecutionDetailView({ executionId, onClose }: ExecutionD
                   <div className="p-5 space-y-4">
                     {item.data.fieldHistories.map((history) => {
                       const latestVersion = history.versions[history.versions.length - 1];
+                      const fieldDef = getFieldDefinition(item.nodeId, history.fieldId);
                       return (
                         <div key={history.fieldId} className="border-l-2 border-blue-200 pl-4">
                           <div className="flex items-center gap-2 mb-1">
@@ -270,9 +356,12 @@ export default function ExecutionDetailView({ executionId, onClose }: ExecutionD
                             )}
                           </div>
                           {latestVersion ? (
-                            <p className="text-sm text-gray-600 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">
-                              {latestVersion.value || <span className="italic text-gray-400">Empty</span>}
-                            </p>
+                            <div className="text-sm text-gray-600 bg-gray-50 rounded px-3 py-2">
+                              <FieldValueDisplay
+                                value={latestVersion.value}
+                                subfields={fieldDef?.subfields}
+                              />
+                            </div>
                           ) : (
                             <p className="text-sm text-gray-400 italic">Not submitted yet</p>
                           )}

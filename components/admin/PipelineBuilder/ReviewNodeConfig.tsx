@@ -342,7 +342,7 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
                   <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <span className="text-sm font-medium text-red-700">Need at least one field selected</span>
+                  <span className="text-sm font-medium text-red-700">At least one field must be selected for review</span>
                 </div>
               )}
 
@@ -463,8 +463,8 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
             onClick={handleSave}
             disabled={hasNoFieldsSelected}
             className={`px-6 py-2 text-white rounded-lg font-medium transition-colors shadow-sm ${hasNoFieldsSelected
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-purple-500 hover:bg-purple-600'
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-purple-500 hover:bg-purple-600'
               }`}
           >
             Save

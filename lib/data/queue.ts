@@ -24,14 +24,14 @@ import { getRejectedFieldIds, getAcceptedFieldValues } from '@/lib/pipeline/exec
 function getPriorSubtaskNodeIds(pipeline: Pipeline, currentNodeId: string): string[] {
   const priorNodeIds: string[] = [];
   const visited = new Set<string>();
-  
+
   function traverseBackwards(nodeId: string) {
     if (visited.has(nodeId)) return;
     visited.add(nodeId);
-    
+
     // Find all edges that point TO this node
     const incomingEdges = pipeline.edges.filter(e => e.target === nodeId);
-    
+
     for (const edge of incomingEdges) {
       const sourceNode = pipeline.nodes.find(n => n.id === edge.source);
       if (sourceNode) {
@@ -49,7 +49,7 @@ function getPriorSubtaskNodeIds(pipeline: Pipeline, currentNodeId: string): stri
       }
     }
   }
-  
+
   traverseBackwards(currentNodeId);
   return priorNodeIds;
 }
@@ -64,28 +64,28 @@ function getAccumulatedFields(
 ): AccumulatedField[] {
   const priorSubtaskNodeIds = getPriorSubtaskNodeIds(pipeline, currentNodeId);
   const accumulatedFields: AccumulatedField[] = [];
-  
+
   for (const nodeId of priorSubtaskNodeIds) {
     const subtaskExec = execution.nodeExecutions.find(
       ne => ne.nodeId === nodeId
     ) as SubtaskExecution | undefined;
-    
+
     if (!subtaskExec || !isSubtaskExecution(subtaskExec)) continue;
-    
+
     const pipelineNode = pipeline.nodes.find(n => n.id === nodeId);
     if (!pipelineNode || pipelineNode.type !== 'subtask') continue;
-    
+
     const subtaskData = pipelineNode.data as SubtaskNodeData;
-    
+
     // Only include fields that have been submitted (have versions)
     for (const history of subtaskExec.fieldHistories) {
       if (history.versions.length === 0) continue;
-      
+
       const field = subtaskData.fields.find(f => f.id === history.fieldId);
       if (!field) continue;
-      
+
       const latestVersion = history.versions[history.versions.length - 1];
-      
+
       accumulatedFields.push({
         fieldId: history.fieldId,
         nodeId: nodeId,
@@ -98,7 +98,7 @@ function getAccumulatedFields(
       });
     }
   }
-  
+
   return accumulatedFields;
 }
 
@@ -140,8 +140,10 @@ export async function getEditorQueue(): Promise<EditorQueueItem[]> {
         ? getAcceptedFieldValues(currentNode)
         : undefined;
 
-      // Get accumulated fields from prior subtasks
-      const accumulatedFields = getAccumulatedFields(pipeline, execution, currentNode.nodeId);
+      // Get accumulated fields from prior subtasks (unless hidden)
+      const accumulatedFields = subtaskData.hidePriorFields
+        ? []
+        : getAccumulatedFields(pipeline, execution, currentNode.nodeId);
 
       const assignedTo = currentNode.assignedTo;
       let assignmentBehavior: 'any' | 'same_person' | 'different_person' | undefined;
@@ -229,20 +231,20 @@ export async function getReviewerQueue(): Promise<ReviewerQueueItem[]> {
       // 2. If reviewableFieldIds is set, only include those fields
       // 3. Otherwise, include all non-instruction fields
       const reviewableFieldIds = reviewNodeData.reviewableFieldIds;
-      
+
       const fieldsToReview: FieldToReview[] = subtaskExec.fieldHistories
         .filter(history => {
           const field = subtaskFields.find(f => f.id === history.fieldId);
           if (!field) return false;
-          
+
           // Never review instruction fields
           if (field.type === 'instructions') return false;
-          
+
           // If reviewableFieldIds is set, only include those fields
           if (reviewableFieldIds && reviewableFieldIds.length > 0) {
             return reviewableFieldIds.includes(history.fieldId);
           }
-          
+
           // Otherwise, include all non-instruction fields
           return true;
         })

@@ -1,9 +1,67 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ReviewerQueueItem } from '@/types';
+import { ReviewerQueueItem, TaskField } from '@/types';
 import Button from '@/components/ui/Button';
 import SubtaskReviewForm from './SubtaskReviewForm';
+
+// Helper component to render field values, including dynamic fields
+function FieldValueDisplay({ value, subfields }: { value: string; subfields?: TaskField[] }) {
+  if (!value) {
+    return <span className="italic text-gray-400">Empty</span>;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      const hasSubfields = subfields && subfields.length > 0;
+
+      if (typeof parsed[0] === 'string') {
+        return (
+          <div className="space-y-1">
+            {parsed.map((entry: string, idx: number) => (
+              <div key={idx} className="flex items-start gap-2">
+                <span className="text-xs text-gray-400">{idx + 1}.</span>
+                <span>{entry || <span className="text-gray-400 italic">Empty</span>}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-2">
+          {parsed.map((entry: Record<string, string>, idx: number) => (
+            <div key={idx} className="border-l-2 border-gray-200 pl-2 text-xs">
+              <span className="text-gray-500">Entry {idx + 1}</span>
+              <div className="mt-1 space-y-0.5">
+                {hasSubfields ? (
+                  subfields.map((subfield) => (
+                    <div key={subfield.id}>
+                      <span className="text-gray-500">{subfield.label || subfield.id}:</span>{' '}
+                      <span>{entry[subfield.id] || <span className="text-gray-400 italic">Empty</span>}</span>
+                    </div>
+                  ))
+                ) : (
+                  Object.entries(entry).map(([key, val]) => (
+                    <div key={key}>
+                      <span className="text-gray-500">{key === '_value' ? 'Value' : key}:</span>{' '}
+                      <span>{val || <span className="text-gray-400 italic">Empty</span>}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+  } catch {
+    // Not JSON, display as plain text
+  }
+
+  return <span>{value}</span>;
+}
 
 export default function ReviewerView() {
   const [queueItems, setQueueItems] = useState<ReviewerQueueItem[]>([]);
@@ -144,10 +202,8 @@ export default function ReviewerView() {
                             </span>
                           )}
                         </div>
-                        <div className="px-3 py-2">
-                          <p className="text-sm text-gray-900 line-clamp-2">
-                            {field.currentValue || <span className="italic text-gray-400">Empty</span>}
-                          </p>
+                        <div className="px-3 py-2 text-sm text-gray-900 line-clamp-3">
+                          <FieldValueDisplay value={field.currentValue} subfields={field.subfields} />
                         </div>
                       </div>
                     ))}

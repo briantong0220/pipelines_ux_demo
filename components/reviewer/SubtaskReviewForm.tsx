@@ -6,6 +6,53 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import FieldReviewItem from './FieldReviewItem';
 
+// Helper component to render field values, including dynamic fields
+function FieldValueDisplay({ value }: { value: string }) {
+  if (!value) {
+    return <span className="text-gray-400 italic">No response</span>;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      if (typeof parsed[0] === 'string') {
+        return (
+          <div className="space-y-1">
+            {parsed.map((entry: string, idx: number) => (
+              <div key={idx} className="flex items-start gap-2">
+                <span className="text-xs text-gray-400">{idx + 1}.</span>
+                <span>{entry || <span className="text-gray-400 italic">Empty</span>}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-2">
+          {parsed.map((entry: Record<string, string>, idx: number) => (
+            <div key={idx} className="border-l-2 border-gray-300 pl-2">
+              <span className="text-xs text-gray-400">Entry {idx + 1}</span>
+              <div className="mt-1 space-y-1">
+                {Object.entries(entry).map(([key, val]) => (
+                  <div key={key} className="text-xs">
+                    <span className="text-gray-500">{key === '_value' ? 'Value' : key}:</span>{' '}
+                    <span>{val || <span className="text-gray-400 italic">Empty</span>}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+  } catch {
+    // Not JSON, display as plain text
+  }
+
+  return <span>{value}</span>;
+}
+
 interface SubtaskReviewFormProps {
   queueItem: ReviewerQueueItem;
   onSubmitted: () => void;
@@ -100,8 +147,8 @@ export default function SubtaskReviewForm({
   const rejectedCount = Array.from(fieldReviews.values()).filter((r) => r.status === 'rejected')
     .length;
   const allReviewed = reviewedCount === totalCount;
-  const groupedAccumulatedFields = queueItem.accumulatedFields 
-    ? groupFieldsByNode(queueItem.accumulatedFields) 
+  const groupedAccumulatedFields = queueItem.accumulatedFields
+    ? groupFieldsByNode(queueItem.accumulatedFields)
     : null;
 
   return (
@@ -149,18 +196,17 @@ export default function SubtaskReviewForm({
                       <div key={field.fieldId} className="text-sm">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium text-gray-600">{field.fieldLabel}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            field.reviewStatus === 'accepted' 
-                              ? 'bg-green-100 text-green-700' 
+                          <span className={`text-xs px-2 py-0.5 rounded ${field.reviewStatus === 'accepted'
+                              ? 'bg-green-100 text-green-700'
                               : field.reviewStatus === 'rejected'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }`}>
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}>
                             {field.reviewStatus}
                           </span>
                         </div>
                         <div className="bg-white border border-gray-200 rounded px-3 py-2 text-gray-700">
-                          {field.value || <span className="text-gray-400 italic">No response</span>}
+                          <FieldValueDisplay value={field.value} />
                         </div>
                         {field.reviewComment && (
                           <p className="mt-1 text-xs text-gray-500 italic">
