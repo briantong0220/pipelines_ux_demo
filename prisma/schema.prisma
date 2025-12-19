@@ -24,13 +24,14 @@ model Task {
 }
 
 model Pipeline {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  nodes       Json     // PipelineNode[] - complex structure with position and data
-  edges       Json     // PipelineEdge[] - connections between nodes
-  createdAt   DateTime @default(now())
-  createdBy   String
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  nodes        Json     // PipelineNode[] - complex structure with position and data
+  edges        Json     // PipelineEdge[] - connections between nodes
+  edgePathType String   @default("bezier") // 'bezier' | 'smoothstep' | 'straight'
+  createdAt    DateTime @default(now())
+  createdBy    String
 
   // Relations
   executions PipelineExecution[]

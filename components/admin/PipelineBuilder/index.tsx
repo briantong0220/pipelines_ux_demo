@@ -7,7 +7,7 @@ import { StartNodeConfig } from './StartNodeConfig';
 import { SubtaskNodeConfig } from './SubtaskNodeConfig';
 import { ReviewNodeConfig } from './ReviewNodeConfig';
 import { EndNodeConfig } from './EndNodeConfig';
-import { PipelineNode, PipelineEdge, PipelineNodeType, StartNodeData, SubtaskNodeData, ReviewNodeData, EndNodeData, isStartNode, isSubtaskNode, isReviewNode, isEndNode } from '@/types';
+import { PipelineNode, PipelineEdge, PipelineNodeType, StartNodeData, SubtaskNodeData, ReviewNodeData, EndNodeData, EdgePathType, isStartNode, isSubtaskNode, isReviewNode, isEndNode } from '@/types';
 import { validatePipeline } from '@/lib/pipeline/validator';
 
 interface PipelineBuilderProps {
@@ -15,7 +15,8 @@ interface PipelineBuilderProps {
   pipelineDescription?: string;
   initialNodes?: PipelineNode[];
   initialEdges?: PipelineEdge[];
-  onSave: (name: string, description: string, nodes: PipelineNode[], edges: PipelineEdge[]) => void;
+  initialEdgePathType?: EdgePathType;
+  onSave: (name: string, description: string, nodes: PipelineNode[], edges: PipelineEdge[], edgePathType: EdgePathType) => void;
   onCancel: () => void;
 }
 
@@ -24,6 +25,7 @@ export function PipelineBuilder({
   pipelineDescription: initialDescription,
   initialNodes = [],
   initialEdges = [],
+  initialEdgePathType = 'bezier',
   onSave,
   onCancel,
 }: PipelineBuilderProps) {
@@ -31,6 +33,7 @@ export function PipelineBuilder({
   const [description, setDescription] = useState(initialDescription || '');
   const [nodes, setNodes] = useState<PipelineNode[]>(initialNodes);
   const [edges, setEdges] = useState<PipelineEdge[]>(initialEdges);
+  const [edgePathType, setEdgePathType] = useState<EdgePathType>(initialEdgePathType);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
@@ -108,8 +111,8 @@ export function PipelineBuilder({
       return;
     }
 
-    onSave(name, description, nodes, edges);
-  }, [name, description, nodes, edges, handleValidate, onSave]);
+    onSave(name, description, nodes, edges, edgePathType);
+  }, [name, description, nodes, edges, edgePathType, handleValidate, onSave]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -199,8 +202,10 @@ export function PipelineBuilder({
           <PipelineCanvas
             nodes={nodes}
             edges={edges}
+            edgePathType={edgePathType}
             onNodesChange={setNodes}
             onEdgesChange={setEdges}
+            onEdgePathTypeChange={setEdgePathType}
             onNodeClick={handleNodeClick}
             onPaneClick={handleClosePanel}
           />

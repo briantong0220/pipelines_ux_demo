@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       description: body.description,
       nodes: body.nodes,
       edges: body.edges,
+      edgePathType: body.edgePathType,
       createdAt: new Date().toISOString(),
       createdBy: 'admin'
     };
@@ -65,7 +66,8 @@ export async function POST(request: NextRequest) {
       name: body.name,
       description: body.description,
       nodes: body.nodes,
-      edges: body.edges
+      edges: body.edges,
+      edgePathType: body.edgePathType
     });
 
     return Response.json({ success: true, data: pipeline } as ApiResponse<Pipeline>);

@@ -10,8 +10,7 @@ import {
   getStraightPath,
   useReactFlow,
 } from '@xyflow/react';
-
-export type EdgePathType = 'bezier' | 'smoothstep' | 'straight';
+import { EdgePathType } from '@/types';
 
 function DeletableEdge({
   id,

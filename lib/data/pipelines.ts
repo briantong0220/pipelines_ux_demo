@@ -1,4 +1,4 @@
-import { Pipeline, PipelineNode, PipelineEdge } from '@/types';
+import { Pipeline, PipelineNode, PipelineEdge, EdgePathType } from '@/types';
 import prisma from '@/lib/prisma';
 
 /**
@@ -15,6 +15,7 @@ export async function getPipelines(): Promise<Pipeline[]> {
     description: pipeline.description ?? undefined,
     nodes: pipeline.nodes as unknown as PipelineNode[],
     edges: pipeline.edges as unknown as PipelineEdge[],
+    edgePathType: (pipeline.edgePathType as EdgePathType) ?? 'bezier',
     createdAt: pipeline.createdAt.toISOString(),
     createdBy: pipeline.createdBy,
   }));
@@ -36,6 +37,7 @@ export async function getPipelineById(id: string): Promise<Pipeline | undefined>
     description: pipeline.description ?? undefined,
     nodes: pipeline.nodes as unknown as PipelineNode[],
     edges: pipeline.edges as unknown as PipelineEdge[],
+    edgePathType: (pipeline.edgePathType as EdgePathType) ?? 'bezier',
     createdAt: pipeline.createdAt.toISOString(),
     createdBy: pipeline.createdBy,
   };
@@ -53,6 +55,7 @@ export async function createPipeline(
       description: pipelineData.description,
       nodes: pipelineData.nodes as unknown as object,
       edges: pipelineData.edges as unknown as object,
+      edgePathType: pipelineData.edgePathType ?? 'bezier',
       createdBy: 'admin',
     },
   });
@@ -63,6 +66,7 @@ export async function createPipeline(
     description: pipeline.description ?? undefined,
     nodes: pipeline.nodes as unknown as PipelineNode[],
     edges: pipeline.edges as unknown as PipelineEdge[],
+    edgePathType: (pipeline.edgePathType as EdgePathType) ?? 'bezier',
     createdAt: pipeline.createdAt.toISOString(),
     createdBy: pipeline.createdBy,
   };
@@ -83,6 +87,7 @@ export async function updatePipeline(
         ...(updates.description !== undefined && { description: updates.description }),
         ...(updates.nodes !== undefined && { nodes: updates.nodes as unknown as object }),
         ...(updates.edges !== undefined && { edges: updates.edges as unknown as object }),
+        ...(updates.edgePathType !== undefined && { edgePathType: updates.edgePathType }),
       },
     });
 
@@ -92,6 +97,7 @@ export async function updatePipeline(
       description: pipeline.description ?? undefined,
       nodes: pipeline.nodes as unknown as PipelineNode[],
       edges: pipeline.edges as unknown as PipelineEdge[],
+      edgePathType: (pipeline.edgePathType as EdgePathType) ?? 'bezier',
       createdAt: pipeline.createdAt.toISOString(),
       createdBy: pipeline.createdBy,
     };

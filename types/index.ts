@@ -122,12 +122,15 @@ export interface PipelineEdge {
   };
 }
 
+export type EdgePathType = 'bezier' | 'smoothstep' | 'straight';
+
 export interface Pipeline {
   id: string;                    // UUID for pipeline
   name: string;                  // Pipeline name
   description?: string;          // Pipeline description
   nodes: PipelineNode[];         // All nodes in the graph
   edges: PipelineEdge[];         // All edges connecting nodes
+  edgePathType?: EdgePathType;   // Edge rendering style (default: bezier)
   createdAt: string;             // ISO timestamp
   createdBy: string;             // User who created it
 }

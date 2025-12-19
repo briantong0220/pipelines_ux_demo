@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Pipeline, PipelineNode, PipelineEdge, PipelineExecution } from '@/types';
+import { Pipeline, PipelineNode, PipelineEdge, PipelineExecution, EdgePathType } from '@/types';
 import Button from '@/components/ui/Button';
 import { PipelineBuilder } from './PipelineBuilder';
 import ExecutionDetailView from './ExecutionDetailView';
@@ -89,7 +89,8 @@ export default function AdminView() {
     name: string,
     description: string,
     nodes: PipelineNode[],
-    edges: PipelineEdge[]
+    edges: PipelineEdge[],
+    edgePathType: EdgePathType
   ) => {
     try {
       const url = editingPipeline ? `/api/pipelines/${editingPipeline.id}` : '/api/pipelines';
@@ -98,7 +99,7 @@ export default function AdminView() {
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, nodes, edges }),
+        body: JSON.stringify({ name, description, nodes, edges, edgePathType }),
       });
 
       const result = await response.json();
@@ -212,6 +213,7 @@ export default function AdminView() {
         pipelineDescription={editingPipeline?.description}
         initialNodes={editingPipeline ? editingPipeline.nodes : builderInitialNodes}
         initialEdges={editingPipeline ? editingPipeline.edges : builderInitialEdges}
+        initialEdgePathType={editingPipeline?.edgePathType}
         onSave={handleSavePipeline}
         onCancel={() => {
           setShowBuilder(false);
@@ -344,8 +346,8 @@ export default function AdminView() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${exec.status === 'completed'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-blue-100 text-blue-700'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-blue-100 text-blue-700'
                           }`}>
                           {exec.status}
                         </span>

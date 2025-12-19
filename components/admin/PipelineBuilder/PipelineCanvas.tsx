@@ -23,8 +23,8 @@ import { StartNode } from './nodes/StartNode';
 import { SubtaskNode } from './nodes/SubtaskNode';
 import { ReviewNode } from './nodes/ReviewNode';
 import { EndNode } from './nodes/EndNode';
-import DeletableEdge, { EdgePathType } from './edges/DeletableEdge';
-import { PipelineNode, PipelineEdge, PipelineNodeType } from '@/types';
+import DeletableEdge from './edges/DeletableEdge';
+import { PipelineNode, PipelineEdge, PipelineNodeType, EdgePathType } from '@/types';
 
 const nodeTypes: NodeTypes = {
   start: StartNode,
@@ -40,8 +40,10 @@ const edgeTypes: EdgeTypes = {
 interface PipelineCanvasProps {
   nodes: PipelineNode[];
   edges: PipelineEdge[];
+  edgePathType: EdgePathType;
   onNodesChange: (nodes: PipelineNode[]) => void;
   onEdgesChange: (edges: PipelineEdge[]) => void;
+  onEdgePathTypeChange: (pathType: EdgePathType) => void;
   onNodeClick?: (node: PipelineNode) => void;
   onPaneClick?: () => void;
 }
@@ -49,8 +51,10 @@ interface PipelineCanvasProps {
 export function PipelineCanvas({
   nodes: externalNodes,
   edges: externalEdges,
+  edgePathType,
   onNodesChange,
   onEdgesChange,
+  onEdgePathTypeChange,
   onNodeClick,
   onPaneClick,
 }: PipelineCanvasProps) {
@@ -59,7 +63,6 @@ export function PipelineCanvas({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-  const [edgePathType, setEdgePathType] = useState<EdgePathType>('bezier');
 
   // Track if we're syncing from external to prevent feedback loops
   const isSyncingFromExternal = useRef(false);
@@ -401,7 +404,7 @@ export function PipelineCanvas({
       {/* Edge Path Type Toggle */}
       <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md border border-gray-200 p-1 flex gap-1">
         <button
-          onClick={() => setEdgePathType('bezier')}
+          onClick={() => onEdgePathTypeChange('bezier')}
           className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${edgePathType === 'bezier'
             ? 'bg-blue-500 text-white'
             : 'text-gray-600 hover:bg-gray-100'
@@ -413,7 +416,7 @@ export function PipelineCanvas({
           </svg>
         </button>
         <button
-          onClick={() => setEdgePathType('smoothstep')}
+          onClick={() => onEdgePathTypeChange('smoothstep')}
           className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${edgePathType === 'smoothstep'
             ? 'bg-blue-500 text-white'
             : 'text-gray-600 hover:bg-gray-100'
@@ -425,7 +428,7 @@ export function PipelineCanvas({
           </svg>
         </button>
         <button
-          onClick={() => setEdgePathType('straight')}
+          onClick={() => onEdgePathTypeChange('straight')}
           className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${edgePathType === 'straight'
             ? 'bg-blue-500 text-white'
             : 'text-gray-600 hover:bg-gray-100'
