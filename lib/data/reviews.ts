@@ -1,39 +1,65 @@
 import { Review, FieldComment } from '@/types';
-import { readJSONFile, writeJSONFile } from './storage';
-import { randomUUID } from 'crypto';
-
-const REVIEWS_FILE = 'reviews.json';
-
-interface ReviewsData {
-  reviews: Review[];
-}
-
-const DEFAULT_DATA: ReviewsData = {
-  reviews: []
-};
+import prisma from '@/lib/prisma';
 
 /**
  * Get all reviews
  */
 export async function getReviews(): Promise<Review[]> {
-  const data = await readJSONFile<ReviewsData>(REVIEWS_FILE, DEFAULT_DATA);
-  return data.reviews;
+  const reviews = await prisma.review.findMany({
+    orderBy: { reviewedAt: 'desc' },
+  });
+
+  return reviews.map((review) => ({
+    id: review.id,
+    responseId: review.responseId,
+    fieldComments: review.fieldComments as unknown as FieldComment[],
+    overallRating: review.overallRating,
+    overallComment: review.overallComment ?? undefined,
+    reviewedAt: review.reviewedAt.toISOString(),
+    reviewedBy: review.reviewedBy,
+  }));
 }
 
 /**
  * Get a review by ID
  */
 export async function getReviewById(id: string): Promise<Review | undefined> {
-  const reviews = await getReviews();
-  return reviews.find(review => review.id === id);
+  const review = await prisma.review.findUnique({
+    where: { id },
+  });
+
+  if (!review) return undefined;
+
+  return {
+    id: review.id,
+    responseId: review.responseId,
+    fieldComments: review.fieldComments as unknown as FieldComment[],
+    overallRating: review.overallRating,
+    overallComment: review.overallComment ?? undefined,
+    reviewedAt: review.reviewedAt.toISOString(),
+    reviewedBy: review.reviewedBy,
+  };
 }
 
 /**
  * Get review for a specific response
  */
 export async function getReviewByResponseId(responseId: string): Promise<Review | undefined> {
-  const reviews = await getReviews();
-  return reviews.find(review => review.responseId === responseId);
+  const review = await prisma.review.findUnique({
+    where: { responseId },
+  });
+
+  if (!review) return undefined;
+
+  return {
+    id: review.id,
+    responseId: review.responseId,
+    fieldComments: review.fieldComments as unknown as FieldComment[],
+    overallRating: review.overallRating,
+    overallComment: review.overallComment ?? undefined,
+    reviewedAt: review.reviewedAt.toISOString(),
+    reviewedBy: review.reviewedBy,
+  };
 }
 
 /**
@@ -45,22 +71,25 @@ export async function createReview(reviewData: {
   overallRating: number;
   overallComment?: string;
 }): Promise<Review> {
-  const data = await readJSONFile<ReviewsData>(REVIEWS_FILE, DEFAULT_DATA);
+  const review = await prisma.review.create({
+    data: {
+      responseId: reviewData.responseId,
+      fieldComments: reviewData.fieldComments as unknown as object,
+      overallRating: reviewData.overallRating,
+      overallComment: reviewData.overallComment,
+      reviewedBy: 'reviewer',
+    },
+  });
 
-  const newReview: Review = {
-    id: randomUUID(),
-    responseId: reviewData.responseId,
-    fieldComments: reviewData.fieldComments,
-    overallRating: reviewData.overallRating,
-    overallComment: reviewData.overallComment,
-    reviewedAt: new Date().toISOString(),
-    reviewedBy: 'reviewer'
+  return {
+    id: review.id,
+    responseId: review.responseId,
+    fieldComments: review.fieldComments as unknown as FieldComment[],
+    overallRating: review.overallRating,
+    overallComment: review.overallComment ?? undefined,
+    reviewedAt: review.reviewedAt.toISOString(),
+    reviewedBy: review.reviewedBy,
   };
-
-  data.reviews.push(newReview);
-  await writeJSONFile(REVIEWS_FILE, data);
-
-  return newReview;
 }
 
 /**
@@ -74,19 +103,29 @@ export async function updateReview(
     overallComment?: string;
   }
 ): Promise<Review | undefined> {
-  const data = await readJSONFile<ReviewsData>(REVIEWS_FILE, DEFAULT_DATA);
+  try {
+    const review = await prisma.review.update({
+      where: { id },
+      data: {
+        ...(updates.fieldComments !== undefined && {
+          fieldComments: updates.fieldComments as unknown as object,
+        }),
+        ...(updates.overallRating !== undefined && { overallRating: updates.overallRating }),
+        ...(updates.overallComment !== undefined && { overallComment: updates.overallComment }),
+        reviewedAt: new Date(),
+      },
+    });
 
-  const reviewIndex = data.reviews.findIndex(review => review.id === id);
-  if (reviewIndex === -1) {
-    return undefined;
+    return {
+      id: review.id,
+      responseId: review.responseId,
+      fieldComments: review.fieldComments as unknown as FieldComment[],
+      overallRating: review.overallRating,
+      overallComment: review.overallComment ?? undefined,
+      reviewedAt: review.reviewedAt.toISOString(),
+      reviewedBy: review.reviewedBy,
+    };
+  } catch {
+    return undefined; // Review not found
   }
-
-  data.reviews[reviewIndex] = {
-    ...data.reviews[reviewIndex],
-    ...updates,
-    reviewedAt: new Date().toISOString()
-  };
-
-  await writeJSONFile(REVIEWS_FILE, data);
-  return data.reviews[reviewIndex];
 }

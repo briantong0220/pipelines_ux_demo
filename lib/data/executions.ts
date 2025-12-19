@@ -1,58 +1,111 @@
-import { PipelineExecution } from '@/types';
-import { readJSONFile, writeJSONFile } from './storage';
-
-const EXECUTIONS_FILE = 'executions.json';
-
-interface ExecutionsData {
-  executions: PipelineExecution[];
-}
-
-const DEFAULT_DATA: ExecutionsData = {
-  executions: []
-};
+import { PipelineExecution, NodeExecution } from '@/types';
+import prisma from '@/lib/prisma';
 
 /**
  * Get all executions
  */
 export async function getExecutions(): Promise<PipelineExecution[]> {
-  const data = await readJSONFile<ExecutionsData>(EXECUTIONS_FILE, DEFAULT_DATA);
-  return data.executions;
+  const executions = await prisma.pipelineExecution.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return executions.map((execution) => ({
+    id: execution.id,
+    pipelineId: execution.pipelineId,
+    currentNodeId: execution.currentNodeId,
+    status: execution.status as 'active' | 'completed',
+    nodeExecutions: execution.nodeExecutions as unknown as NodeExecution[],
+    createdAt: execution.createdAt.toISOString(),
+    completedAt: execution.completedAt?.toISOString(),
+  }));
 }
 
 /**
  * Get an execution by ID
  */
 export async function getExecutionById(id: string): Promise<PipelineExecution | undefined> {
-  const executions = await getExecutions();
-  return executions.find(execution => execution.id === id);
+  const execution = await prisma.pipelineExecution.findUnique({
+    where: { id },
+  });
+
+  if (!execution) return undefined;
+
+  return {
+    id: execution.id,
+    pipelineId: execution.pipelineId,
+    currentNodeId: execution.currentNodeId,
+    status: execution.status as 'active' | 'completed',
+    nodeExecutions: execution.nodeExecutions as unknown as NodeExecution[],
+    createdAt: execution.createdAt.toISOString(),
+    completedAt: execution.completedAt?.toISOString(),
+  };
 }
 
 /**
  * Get all active executions
  */
 export async function getActiveExecutions(): Promise<PipelineExecution[]> {
-  const executions = await getExecutions();
-  return executions.filter(execution => execution.status === 'active');
+  const executions = await prisma.pipelineExecution.findMany({
+    where: { status: 'active' },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return executions.map((execution) => ({
+    id: execution.id,
+    pipelineId: execution.pipelineId,
+    currentNodeId: execution.currentNodeId,
+    status: execution.status as 'active' | 'completed',
+    nodeExecutions: execution.nodeExecutions as unknown as NodeExecution[],
+    createdAt: execution.createdAt.toISOString(),
+    completedAt: execution.completedAt?.toISOString(),
+  }));
 }
 
 /**
  * Get executions by pipeline ID
  */
 export async function getExecutionsByPipelineId(pipelineId: string): Promise<PipelineExecution[]> {
-  const executions = await getExecutions();
-  return executions.filter(execution => execution.pipelineId === pipelineId);
+  const executions = await prisma.pipelineExecution.findMany({
+    where: { pipelineId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return executions.map((execution) => ({
+    id: execution.id,
+    pipelineId: execution.pipelineId,
+    currentNodeId: execution.currentNodeId,
+    status: execution.status as 'active' | 'completed',
+    nodeExecutions: execution.nodeExecutions as unknown as NodeExecution[],
+    createdAt: execution.createdAt.toISOString(),
+    completedAt: execution.completedAt?.toISOString(),
+  }));
 }
 
 /**
  * Create a new execution
  */
-export async function createExecution(execution: PipelineExecution): Promise<PipelineExecution> {
-  const data = await readJSONFile<ExecutionsData>(EXECUTIONS_FILE, DEFAULT_DATA);
+export async function createExecution(executionData: PipelineExecution): Promise<PipelineExecution> {
+  const execution = await prisma.pipelineExecution.create({
+    data: {
+      id: executionData.id,
+      pipelineId: executionData.pipelineId,
+      currentNodeId: executionData.currentNodeId,
+      status: executionData.status,
+      nodeExecutions: executionData.nodeExecutions as unknown as object,
+      createdAt: new Date(executionData.createdAt),
+      completedAt: executionData.completedAt ? new Date(executionData.completedAt) : null,
+    },
+  });
 
-  data.executions.push(execution);
-  await writeJSONFile(EXECUTIONS_FILE, data);
-
-  return execution;
+  return {
+    id: execution.id,
+    pipelineId: execution.pipelineId,
+    currentNodeId: execution.currentNodeId,
+    status: execution.status as 'active' | 'completed',
+    nodeExecutions: execution.nodeExecutions as unknown as NodeExecution[],
+    createdAt: execution.createdAt.toISOString(),
+    completedAt: execution.completedAt?.toISOString(),
+  };
 }
 
 /**
@@ -62,55 +115,81 @@ export async function updateExecution(
   id: string,
   updates: Partial<Omit<PipelineExecution, 'id' | 'createdAt'>>
 ): Promise<PipelineExecution | undefined> {
-  const data = await readJSONFile<ExecutionsData>(EXECUTIONS_FILE, DEFAULT_DATA);
+  try {
+    const execution = await prisma.pipelineExecution.update({
+      where: { id },
+      data: {
+        ...(updates.pipelineId !== undefined && { pipelineId: updates.pipelineId }),
+        ...(updates.currentNodeId !== undefined && { currentNodeId: updates.currentNodeId }),
+        ...(updates.status !== undefined && { status: updates.status }),
+        ...(updates.nodeExecutions !== undefined && {
+          nodeExecutions: updates.nodeExecutions as unknown as object,
+        }),
+        ...(updates.completedAt !== undefined && {
+          completedAt: updates.completedAt ? new Date(updates.completedAt) : null,
+        }),
+      },
+    });
 
-  const executionIndex = data.executions.findIndex(execution => execution.id === id);
-  if (executionIndex === -1) {
-    return undefined;
+    return {
+      id: execution.id,
+      pipelineId: execution.pipelineId,
+      currentNodeId: execution.currentNodeId,
+      status: execution.status as 'active' | 'completed',
+      nodeExecutions: execution.nodeExecutions as unknown as NodeExecution[],
+      createdAt: execution.createdAt.toISOString(),
+      completedAt: execution.completedAt?.toISOString(),
+    };
+  } catch {
+    return undefined; // Execution not found
   }
-
-  data.executions[executionIndex] = {
-    ...data.executions[executionIndex],
-    ...updates
-  };
-
-  await writeJSONFile(EXECUTIONS_FILE, data);
-  return data.executions[executionIndex];
 }
 
 /**
  * Save updated execution (replaces entire execution)
  */
-export async function saveExecution(execution: PipelineExecution): Promise<PipelineExecution> {
-  const data = await readJSONFile<ExecutionsData>(EXECUTIONS_FILE, DEFAULT_DATA);
+export async function saveExecution(executionData: PipelineExecution): Promise<PipelineExecution> {
+  const execution = await prisma.pipelineExecution.upsert({
+    where: { id: executionData.id },
+    update: {
+      pipelineId: executionData.pipelineId,
+      currentNodeId: executionData.currentNodeId,
+      status: executionData.status,
+      nodeExecutions: executionData.nodeExecutions as unknown as object,
+      completedAt: executionData.completedAt ? new Date(executionData.completedAt) : null,
+    },
+    create: {
+      id: executionData.id,
+      pipelineId: executionData.pipelineId,
+      currentNodeId: executionData.currentNodeId,
+      status: executionData.status,
+      nodeExecutions: executionData.nodeExecutions as unknown as object,
+      createdAt: new Date(executionData.createdAt),
+      completedAt: executionData.completedAt ? new Date(executionData.completedAt) : null,
+    },
+  });
 
-  const executionIndex = data.executions.findIndex(e => e.id === execution.id);
-
-  if (executionIndex === -1) {
-    // New execution
-    data.executions.push(execution);
-  } else {
-    // Update existing
-    data.executions[executionIndex] = execution;
-  }
-
-  await writeJSONFile(EXECUTIONS_FILE, data);
-  return execution;
+  return {
+    id: execution.id,
+    pipelineId: execution.pipelineId,
+    currentNodeId: execution.currentNodeId,
+    status: execution.status as 'active' | 'completed',
+    nodeExecutions: execution.nodeExecutions as unknown as NodeExecution[],
+    createdAt: execution.createdAt.toISOString(),
+    completedAt: execution.completedAt?.toISOString(),
+  };
 }
 
 /**
  * Delete an execution by ID
  */
 export async function deleteExecution(id: string): Promise<boolean> {
-  const data = await readJSONFile<ExecutionsData>(EXECUTIONS_FILE, DEFAULT_DATA);
-  const initialLength = data.executions.length;
-
-  data.executions = data.executions.filter(execution => execution.id !== id);
-
-  if (data.executions.length === initialLength) {
+  try {
+    await prisma.pipelineExecution.delete({
+      where: { id },
+    });
+    return true;
+  } catch {
     return false; // Execution not found
   }
-
-  await writeJSONFile(EXECUTIONS_FILE, data);
-  return true;
 }

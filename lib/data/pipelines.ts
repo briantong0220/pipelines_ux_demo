@@ -1,50 +1,71 @@
-import { Pipeline } from '@/types';
-import { readJSONFile, writeJSONFile } from './storage';
-import { randomUUID } from 'crypto';
-
-const PIPELINES_FILE = 'pipelines.json';
-
-interface PipelinesData {
-  pipelines: Pipeline[];
-}
-
-const DEFAULT_DATA: PipelinesData = {
-  pipelines: []
-};
+import { Pipeline, PipelineNode, PipelineEdge } from '@/types';
+import prisma from '@/lib/prisma';
 
 /**
  * Get all pipelines
  */
 export async function getPipelines(): Promise<Pipeline[]> {
-  const data = await readJSONFile<PipelinesData>(PIPELINES_FILE, DEFAULT_DATA);
-  return data.pipelines;
+  const pipelines = await prisma.pipeline.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return pipelines.map((pipeline) => ({
+    id: pipeline.id,
+    name: pipeline.name,
+    description: pipeline.description ?? undefined,
+    nodes: pipeline.nodes as unknown as PipelineNode[],
+    edges: pipeline.edges as unknown as PipelineEdge[],
+    createdAt: pipeline.createdAt.toISOString(),
+    createdBy: pipeline.createdBy,
+  }));
 }
 
 /**
  * Get a pipeline by ID
  */
 export async function getPipelineById(id: string): Promise<Pipeline | undefined> {
-  const pipelines = await getPipelines();
-  return pipelines.find(pipeline => pipeline.id === id);
+  const pipeline = await prisma.pipeline.findUnique({
+    where: { id },
+  });
+
+  if (!pipeline) return undefined;
+
+  return {
+    id: pipeline.id,
+    name: pipeline.name,
+    description: pipeline.description ?? undefined,
+    nodes: pipeline.nodes as unknown as PipelineNode[],
+    edges: pipeline.edges as unknown as PipelineEdge[],
+    createdAt: pipeline.createdAt.toISOString(),
+    createdBy: pipeline.createdBy,
+  };
 }
 
 /**
  * Create a new pipeline
  */
-export async function createPipeline(pipelineData: Omit<Pipeline, 'id' | 'createdAt' | 'createdBy'>): Promise<Pipeline> {
-  const data = await readJSONFile<PipelinesData>(PIPELINES_FILE, DEFAULT_DATA);
+export async function createPipeline(
+  pipelineData: Omit<Pipeline, 'id' | 'createdAt' | 'createdBy'>
+): Promise<Pipeline> {
+  const pipeline = await prisma.pipeline.create({
+    data: {
+      name: pipelineData.name,
+      description: pipelineData.description,
+      nodes: pipelineData.nodes as unknown as object,
+      edges: pipelineData.edges as unknown as object,
+      createdBy: 'admin',
+    },
+  });
 
-  const newPipeline: Pipeline = {
-    id: randomUUID(),
-    ...pipelineData,
-    createdAt: new Date().toISOString(),
-    createdBy: 'admin'
+  return {
+    id: pipeline.id,
+    name: pipeline.name,
+    description: pipeline.description ?? undefined,
+    nodes: pipeline.nodes as unknown as PipelineNode[],
+    edges: pipeline.edges as unknown as PipelineEdge[],
+    createdAt: pipeline.createdAt.toISOString(),
+    createdBy: pipeline.createdBy,
   };
-
-  data.pipelines.push(newPipeline);
-  await writeJSONFile(PIPELINES_FILE, data);
-
-  return newPipeline;
 }
 
 /**
@@ -54,35 +75,41 @@ export async function updatePipeline(
   id: string,
   updates: Partial<Omit<Pipeline, 'id' | 'createdAt' | 'createdBy'>>
 ): Promise<Pipeline | undefined> {
-  const data = await readJSONFile<PipelinesData>(PIPELINES_FILE, DEFAULT_DATA);
+  try {
+    const pipeline = await prisma.pipeline.update({
+      where: { id },
+      data: {
+        ...(updates.name !== undefined && { name: updates.name }),
+        ...(updates.description !== undefined && { description: updates.description }),
+        ...(updates.nodes !== undefined && { nodes: updates.nodes as unknown as object }),
+        ...(updates.edges !== undefined && { edges: updates.edges as unknown as object }),
+      },
+    });
 
-  const pipelineIndex = data.pipelines.findIndex(pipeline => pipeline.id === id);
-  if (pipelineIndex === -1) {
-    return undefined;
+    return {
+      id: pipeline.id,
+      name: pipeline.name,
+      description: pipeline.description ?? undefined,
+      nodes: pipeline.nodes as unknown as PipelineNode[],
+      edges: pipeline.edges as unknown as PipelineEdge[],
+      createdAt: pipeline.createdAt.toISOString(),
+      createdBy: pipeline.createdBy,
+    };
+  } catch {
+    return undefined; // Pipeline not found
   }
-
-  data.pipelines[pipelineIndex] = {
-    ...data.pipelines[pipelineIndex],
-    ...updates
-  };
-
-  await writeJSONFile(PIPELINES_FILE, data);
-  return data.pipelines[pipelineIndex];
 }
 
 /**
  * Delete a pipeline by ID
  */
 export async function deletePipeline(id: string): Promise<boolean> {
-  const data = await readJSONFile<PipelinesData>(PIPELINES_FILE, DEFAULT_DATA);
-  const initialLength = data.pipelines.length;
-
-  data.pipelines = data.pipelines.filter(pipeline => pipeline.id !== id);
-
-  if (data.pipelines.length === initialLength) {
+  try {
+    await prisma.pipeline.delete({
+      where: { id },
+    });
+    return true;
+  } catch {
     return false; // Pipeline not found
   }
-
-  await writeJSONFile(PIPELINES_FILE, data);
-  return true;
 }

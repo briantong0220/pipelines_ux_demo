@@ -1,0 +1,83 @@
+// Prisma schema for the human data collection app
+// Uses JSON columns for complex nested structures to match existing data model
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  fields      Json     // TaskField[] - complex nested structure
+  createdAt   DateTime @default(now())
+  createdBy   String
+
+  // Relations
+  responses TaskResponse[]
+
+  @@map("tasks")
+}
+
+model Pipeline {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  nodes       Json     // PipelineNode[] - complex structure with position and data
+  edges       Json     // PipelineEdge[] - connections between nodes
+  createdAt   DateTime @default(now())
+  createdBy   String
+
+  // Relations
+  executions PipelineExecution[]
+
+  @@map("pipelines")
+}
+
+model PipelineExecution {
+  id             String    @id @default(uuid())
+  pipelineId     String
+  currentNodeId  String
+  status         String    // 'active' | 'completed'
+  nodeExecutions Json      // NodeExecution[] - polymorphic subtask/review/end executions
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  // Relations
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@map("pipeline_executions")
+}
+
+model TaskResponse {
+  id          String   @id @default(uuid())
+  taskId      String
+  fields      Json     // ResponseField[] - fieldId/value pairs
+  submittedAt DateTime @default(now())
+  submittedBy String
+
+  // Relations
+  task   Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  review Review?
+
+  @@map("task_responses")
+}
+
+model Review {
+  id             String   @id @default(uuid())
+  responseId     String   @unique
+  fieldComments  Json     // FieldComment[] - comments per field
+  overallRating  Int
+  overallComment String?
+  reviewedAt     DateTime @default(now())
+  reviewedBy     String
+
+  // Relations
+  response TaskResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}

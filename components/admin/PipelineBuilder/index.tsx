@@ -203,10 +203,10 @@ export function PipelineBuilder({
           className={`
             flex-shrink-0 bg-gray-50 border-l border-gray-300 overflow-hidden
             transition-all duration-300 ease-in-out
-            ${selectedNode 
-              ? isPanelExpanded 
-                ? 'w-[calc(100%-64px)]' 
-                : 'w-[500px]' 
+            ${selectedNode
+              ? isPanelExpanded
+                ? 'w-[calc(100%-64px)]'
+                : 'w-[500px]'
               : 'w-0'}
           `}
         >

@@ -102,15 +102,15 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
     setSelectedFieldIds(prev => {
       const next = new Set(prev);
       if (next.has(fieldId)) {
-        if (next.size > 1) {
-          next.delete(fieldId);
-        }
+        next.delete(fieldId);
       } else {
         next.add(fieldId);
       }
       return next;
     });
   };
+
+  const hasNoFieldsSelected = selectedFieldIds.size === 0;
 
   const handleSave = () => {
     onUpdate(nodeId, {
@@ -123,10 +123,10 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
 
     const updatedEdges = allEdges.map(edge => {
       if (edge.source !== nodeId) return edge;
-      
+
       const edgeType = getEdgeType(edge);
       let assignmentBehavior: AssignmentBehavior | undefined;
-      
+
       if (edgeType === 'accept') {
         assignmentBehavior = acceptAssignment;
       } else if (edgeType === 'reject') {
@@ -134,7 +134,7 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
       } else if (edgeType === 'max_attempts') {
         assignmentBehavior = maxAttemptsAssignment;
       }
-      
+
       return {
         ...edge,
         data: {
@@ -143,7 +143,7 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
         },
       };
     });
-    
+
     onEdgesUpdate(updatedEdges);
     onClose();
   };
@@ -337,6 +337,15 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
                 </p>
               )}
 
+              {hasNoFieldsSelected && reviewableFields.length > 0 && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="text-sm font-medium text-red-700">Need at least one field selected</span>
+                </div>
+              )}
+
               {/* Edge Assignment Configuration */}
               {outgoingEdges.length > 0 && (
                 <details className="mt-6 pt-6 border-t border-gray-200">
@@ -348,12 +357,12 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
                       (click to expand)
                     </span>
                   </summary>
-                  
+
                   <div className="mt-4">
                     <p className="text-xs text-gray-500 mb-4">
                       Configure who gets assigned the next task after this review
                     </p>
-                    
+
                     <div className="space-y-3">
                       {acceptEdge && (
                         <div className="flex items-center gap-3 p-3 rounded-lg border border-green-200 bg-green-50">
@@ -370,7 +379,7 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
                           </select>
                         </div>
                       )}
-                      
+
                       {rejectEdge && (
                         <div className="flex items-center gap-3 p-3 rounded-lg border border-red-200 bg-red-50">
                           <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -386,7 +395,7 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
                           </select>
                         </div>
                       )}
-                      
+
                       {maxAttemptsEdge && (
                         <div className="flex items-center gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50">
                           <div className="w-3 h-3 rounded-full bg-orange-500" />
@@ -403,7 +412,7 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
                         </div>
                       )}
                     </div>
-                    
+
                     <p className="text-xs text-gray-400 mt-3">
                       &quot;Same person&quot; = original editor revises their own work.
                       &quot;Different person&quot; = fresh eyes required.
@@ -452,7 +461,11 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2 text-white bg-purple-500 rounded-lg hover:bg-purple-600 font-medium transition-colors shadow-sm"
+            disabled={hasNoFieldsSelected}
+            className={`px-6 py-2 text-white rounded-lg font-medium transition-colors shadow-sm ${hasNoFieldsSelected
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-purple-500 hover:bg-purple-600'
+              }`}
           >
             Save
           </button>

@@ -95,31 +95,48 @@
     {
       "id": "be446483-1e93-4d31-80c2-950e2c29edf4",
       "pipelineId": "e2baec7f-b8cb-4bb3-b4f2-2782a18e50b0",
-      "currentNodeId": "subtask-1766019701016",
+      "currentNodeId": "review-1766019697182",
       "status": "active",
       "nodeExecutions": [
         {
           "nodeId": "review-1766019697182",
-          "status": "pending",
+          "status": "in_progress",
           "sourceSubtaskNodeId": "subtask-1766019701016",
           "allFieldsAccepted": false
         },
         {
           "nodeId": "subtask-1766019701016",
-          "status": "pending",
+          "status": "waiting_review",
           "fieldHistories": [
             {
               "fieldId": "field-1766019850517",
-              "versions": [],
-              "currentVersion": 0
+              "versions": [
+                {
+                  "version": 1,
+                  "value": "2",
+                  "submittedAt": "2025-12-18T02:46:59.356Z",
+                  "submittedBy": "editor",
+                  "status": "pending"
+                }
+              ],
+              "currentVersion": 1
             },
             {
               "fieldId": "field-1766019865165",
-              "versions": [],
-              "currentVersion": 0
+              "versions": [
+                {
+                  "version": 1,
+                  "value": "I used a calculator",
+                  "submittedAt": "2025-12-18T02:46:59.357Z",
+                  "submittedBy": "editor",
+                  "status": "pending"
+                }
+              ],
+              "currentVersion": 1
             }
           ],
-          "startedAt": "2025-12-18T02:03:27.752Z"
+          "startedAt": "2025-12-18T02:03:27.752Z",
+          "lastUpdatedAt": "2025-12-18T02:46:59.357Z"
         },
         {
           "nodeId": "subtask-1766019989591",
@@ -148,31 +165,49 @@
     {
       "id": "d8e8fcc8-7647-4746-99c2-020b2e8755f8",
       "pipelineId": "e2baec7f-b8cb-4bb3-b4f2-2782a18e50b0",
-      "currentNodeId": "subtask-1766019701016",
+      "currentNodeId": "review-1766019697182",
       "status": "active",
       "nodeExecutions": [
         {
           "nodeId": "review-1766019697182",
-          "status": "pending",
+          "status": "in_progress",
           "sourceSubtaskNodeId": "subtask-1766019701016",
           "allFieldsAccepted": false
         },
         {
           "nodeId": "subtask-1766019701016",
-          "status": "pending",
+          "status": "waiting_review",
           "fieldHistories": [
             {
               "fieldId": "field-1766019850517",
-              "versions": [],
-              "currentVersion": 0
+              "versions": [
+                {
+                  "version": 1,
+                  "value": "fea",
+                  "submittedAt": "2025-12-19T18:22:18.706Z",
+                  "submittedBy": "editor",
+                  "status": "pending"
+                }
+              ],
+              "currentVersion": 1
             },
             {
               "fieldId": "field-1766019865165",
-              "versions": [],
-              "currentVersion": 0
+              "versions": [
+                {
+                  "version": 1,
+                  "value": "fea",
+                  "submittedAt": "2025-12-19T18:22:18.706Z",
+                  "submittedBy": "editor",
+                  "status": "pending"
+                }
+              ],
+              "currentVersion": 1
             }
           ],
-          "startedAt": "2025-12-18T23:04:10.072Z"
+          "startedAt": "2025-12-18T23:04:10.072Z",
+          "completedBy": "editor",
+          "lastUpdatedAt": "2025-12-19T18:22:18.706Z"
         },
         {
           "nodeId": "subtask-1766019989591",

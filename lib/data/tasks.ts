@@ -1,31 +1,43 @@
 import { Task, TaskField } from '@/types';
-import { readJSONFile, writeJSONFile } from './storage';
+import prisma from '@/lib/prisma';
 import { randomUUID } from 'crypto';
-
-const TASKS_FILE = 'tasks.json';
-
-interface TasksData {
-  tasks: Task[];
-}
-
-const DEFAULT_DATA: TasksData = {
-  tasks: []
-};
 
 /**
  * Get all tasks
  */
 export async function getTasks(): Promise<Task[]> {
-  const data = await readJSONFile<TasksData>(TASKS_FILE, DEFAULT_DATA);
-  return data.tasks;
+  const tasks = await prisma.task.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    description: task.description ?? undefined,
+    fields: task.fields as unknown as TaskField[],
+    createdAt: task.createdAt.toISOString(),
+    createdBy: task.createdBy,
+  }));
 }
 
 /**
  * Get a task by ID
  */
 export async function getTaskById(id: string): Promise<Task | undefined> {
-  const tasks = await getTasks();
-  return tasks.find(task => task.id === id);
+  const task = await prisma.task.findUnique({
+    where: { id },
+  });
+
+  if (!task) return undefined;
+
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description ?? undefined,
+    fields: task.fields as unknown as TaskField[],
+    createdAt: task.createdAt.toISOString(),
+    createdBy: task.createdBy,
+  };
 }
 
 /**
@@ -36,42 +48,41 @@ export async function createTask(taskData: {
   description?: string;
   fields: Omit<TaskField, 'id'>[];
 }): Promise<Task> {
-  const data = await readJSONFile<TasksData>(TASKS_FILE, DEFAULT_DATA);
-
   // Generate IDs for fields
-  const fields: TaskField[] = taskData.fields.map(field => ({
+  const fields: TaskField[] = taskData.fields.map((field) => ({
     ...field,
-    id: randomUUID()
+    id: randomUUID(),
   }));
 
-  const newTask: Task = {
-    id: randomUUID(),
-    title: taskData.title,
-    description: taskData.description,
-    fields,
-    createdAt: new Date().toISOString(),
-    createdBy: 'admin'
+  const task = await prisma.task.create({
+    data: {
+      title: taskData.title,
+      description: taskData.description,
+      fields: fields as unknown as object,
+      createdBy: 'admin',
+    },
+  });
+
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description ?? undefined,
+    fields: task.fields as unknown as TaskField[],
+    createdAt: task.createdAt.toISOString(),
+    createdBy: task.createdBy,
   };
-
-  data.tasks.push(newTask);
-  await writeJSONFile(TASKS_FILE, data);
-
-  return newTask;
 }
 
 /**
  * Delete a task by ID
  */
 export async function deleteTask(id: string): Promise<boolean> {
-  const data = await readJSONFile<TasksData>(TASKS_FILE, DEFAULT_DATA);
-  const initialLength = data.tasks.length;
-
-  data.tasks = data.tasks.filter(task => task.id !== id);
-
-  if (data.tasks.length === initialLength) {
+  try {
+    await prisma.task.delete({
+      where: { id },
+    });
+    return true;
+  } catch {
     return false; // Task not found
   }
-
-  await writeJSONFile(TASKS_FILE, data);
-  return true;
 }

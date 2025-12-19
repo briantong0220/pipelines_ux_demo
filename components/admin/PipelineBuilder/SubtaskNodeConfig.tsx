@@ -95,7 +95,7 @@ function DynamicSubfieldsConfig({ subfields, onUpdate, isActive }: DynamicSubfie
   };
 
   return (
-    <div 
+    <div
       className={`mt-3 pt-3 border-t border-gray-100 ${isActive ? 'opacity-100' : 'opacity-70'}`}
       onClick={(e) => e.stopPropagation()}
     >
@@ -269,7 +269,7 @@ function FieldCard({
           />
 
           {/* Field Type & Options Row */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             {/* Type Selector */}
             <div className="relative">
               <button

@@ -120,3 +120,4 @@ export function StartNodeConfig({ nodeId, data, onUpdate, onClose }: StartNodeCo
         </div>
     );
 }
+
