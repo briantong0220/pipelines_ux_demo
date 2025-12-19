@@ -474,6 +474,14 @@ export default function SubtaskForm({ queueItem, onSubmitted, onCancel }: Subtas
                       disabled={isAccepted}
                       isRejected={isRejected}
                     />
+                  ) : field.type === 'file' ? (
+                    <FileFieldInput
+                      field={field}
+                      value={fieldValues[field.id] || ''}
+                      onChange={(value) => handleFieldChange(field.id, value)}
+                      disabled={isAccepted}
+                      isRejected={isRejected}
+                    />
                   ) : field.type === 'text' ? (
                     <input
                       type="text"

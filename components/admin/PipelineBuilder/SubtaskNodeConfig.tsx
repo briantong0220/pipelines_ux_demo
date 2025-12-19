@@ -61,6 +61,7 @@ const FIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string; descr
   { value: 'text', label: 'Short answer', icon: '━', description: 'Single line text' },
   { value: 'longtext', label: 'Paragraph', icon: '≡', description: 'Multi-line text' },
   { value: 'dynamic', label: 'Dynamic input', icon: '+', description: 'Expandable multi-entry' },
+  { value: 'file', label: 'File upload', icon: '↑', description: 'Upload documents or images' },
   { value: 'instructions', label: 'Instructions', icon: 'ℹ', description: 'Read-only guidance' },
 ];
 
@@ -338,7 +339,7 @@ function FieldCard({
               )}
             </div>
 
-            {field.type !== 'instructions' && field.type !== 'dynamic' && (
+            {field.type !== 'instructions' && field.type !== 'dynamic' && field.type !== 'file' && (
               <div className="flex-1 max-w-xs">
                 {field.type === 'text' ? (
                   <div className="border-b border-gray-300 border-dotted pb-1 text-sm text-gray-400">
@@ -351,6 +352,16 @@ function FieldCard({
                 )}
               </div>
             )}
+
+            {field.type === 'file' && (
+              <div className="flex-1 max-w-xs">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <span>↑</span>
+                  <span>{field.acceptedFileTypes || 'Any file'}</span>
+                  {field.maxFileSizeMB && <span>• Max {field.maxFileSizeMB}MB</span>}
+                </div>
+              </div>
+            )}
           </div>
 
           {field.type === 'dynamic' && (
@@ -359,6 +370,36 @@ function FieldCard({
               onUpdate={(subfields) => onUpdate({ subfields })}
               isActive={isActive}
             />
+          )}
+
+          {field.type === 'file' && isActive && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Accepted file types</label>
+                <input
+                  type="text"
+                  value={field.acceptedFileTypes || ''}
+                  onChange={(e) => onUpdate({ acceptedFileTypes: e.target.value || undefined })}
+                  placeholder=".pdf,.doc,.docx or image/*"
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <p className="text-xs text-gray-400 mt-1">Leave empty for any file type</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Max file size (MB)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={field.maxFileSizeMB || ''}
+                  onChange={(e) => onUpdate({ maxFileSizeMB: e.target.value ? parseInt(e.target.value) : undefined })}
+                  placeholder="10"
+                  className="w-24 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
           )}
 
           {/* Action Buttons - Always visible on hover, expanded when active */}

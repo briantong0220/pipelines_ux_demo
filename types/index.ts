@@ -2,7 +2,7 @@
 
 export type UserRole = 'admin' | 'editor' | 'reviewer';
 
-export type FieldType = 'text' | 'longtext' | 'instructions' | 'dynamic';
+export type FieldType = 'text' | 'longtext' | 'instructions' | 'dynamic' | 'file';
 
 export interface TaskField {
   id: string;
@@ -10,6 +10,9 @@ export interface TaskField {
   type: FieldType;
   required?: boolean;
   subfields?: TaskField[];
+  // File upload options
+  acceptedFileTypes?: string; // e.g., ".pdf,.doc,.docx" or "image/*"
+  maxFileSizeMB?: number;
 }
 
 export interface Task {

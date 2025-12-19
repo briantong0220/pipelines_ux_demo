@@ -256,7 +256,7 @@ export function ReviewNodeConfig({ nodeId, data, allNodes, allEdges, onUpdate, o
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-700">
-                  Select fields from &quot;{sourceSubtask.subtaskLabel}&quot to review;
+                  Select fields from &quot;{sourceSubtask.subtaskLabel}&quot; to review:
                 </p>
                 <span className="text-xs text-gray-500">
                   {selectedFieldIds.size} of {reviewableFields.length} selected
