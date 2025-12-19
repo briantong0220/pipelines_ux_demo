@@ -449,7 +449,7 @@ function FieldCard({
       onDragEnd={onDragEnd}
       onClick={onActivate}
       className={`
-        group relative bg-white rounded-lg border-2 transition-all duration-200 cursor-pointer overflow-hidden
+        group relative bg-white rounded-lg border-2 transition-all duration-200 cursor-pointer
         ${isActive
           ? 'border-blue-500 shadow-lg ring-2 ring-blue-100'
           : 'border-gray-200 hover:border-gray-300 shadow-sm'
@@ -485,7 +485,7 @@ function FieldCard({
         </div>
 
         {/* Field Content */}
-        <div className="flex-1 min-w-0 p-4 pl-2 overflow-hidden">
+        <div className="flex-1 min-w-0 p-4 pl-2">
           {/* Field Label Input */}
           <input
             ref={inputRef}
